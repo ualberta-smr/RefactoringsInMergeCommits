@@ -22,10 +22,14 @@ def extract_merging_data(project_url, project_name):
             if common_ancestor_hash is None or common_ancestor_hash.strip() == '':
                 continue
 
-            has_conflict = is_merge_commit_conflicting(project_name, merge_commit_hash)
+            has_conflict, conflicts = get_merge_data(project_name, merge_commit_hash)
             merge_commit = MergeCommit(commit_hash=merge_commit_hash, common_ancestor_hash=common_ancestor_hash,
                                        has_conflict=has_conflict, project=project)
             merge_commit.save(force_insert=True)
+            for conflict in conflicts:
+                conflicting_file = ConflictingFile(merge_commit=merge_commit.commit_hash, type=conflict[0],
+                path=conflict[1], package=conflict[2])
+                conflicting_file.save()
 
             merge_parents = get_parents(project_name, merge_commit_hash)
             for merge_parent_hash in merge_parents:
@@ -33,9 +37,11 @@ def extract_merging_data(project_url, project_name):
                 merge_parent.save()
 
                 refactoring_changes = get_refactoring_changes(project_name, merge_parent_hash, common_ancestor_hash)
-                for refactoring_commit_hash, refactoring_type, refactoring_detail in refactoring_changes:
+                for refactoring_commit_hash, refactoring_type, refactoring_detail, source_class, dest_class in refactoring_changes:
                     refactoring_commit = RefactoringCommit(commit_hash=refactoring_commit_hash,
                                                            merge_parent=merge_parent,
                                                            refactoring_type=refactoring_type,
-                                                           refactoring_detail=refactoring_detail)
+                                                           refactoring_detail=refactoring_detail,
+                                                           source_class=source_class,
+                                                           destination_class=dest_class)
                     refactoring_commit.save()
