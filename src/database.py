@@ -59,5 +59,3 @@ class RefactoringCommit(BaseModel):
     class Meta:
         table_name = 'refactoring_commit'
 
-    class Meta:
-        table_name = 'refactoring_commit'

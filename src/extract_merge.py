@@ -14,10 +14,11 @@ def extract_merging_data(project_url, project_name):
     merge_commits = get_merge_commits(project_name)
 
     for merge_commit_index, merge_commit_hash in enumerate(merge_commits):
-        print('Analyzing merge commit {} ({}/{})...'.format(merge_commit_hash[:7], merge_commit_index + 1, len(merge_commits)))
+        print('Analyzing {}, merge commit {} ({}/{})...'.format(project_name, merge_commit_hash[:7],
+                                                                merge_commit_index + 1, len(merge_commits)))
 
         # Merge commit has not been analyzed already.
-        if len(MergeCommit.select().where(MergeCommit.commit_hash == merge_commit_hash)) == 0:
+        if len(MergeCommit.select().where(MergeCommit.commit_hash == merge_commit_hash)) > -100:
             common_ancestor_hash = get_common_ancestor_commit(project_name, get_parents(project_name, merge_commit_hash))
             if common_ancestor_hash is None or common_ancestor_hash.strip() == '':
                 continue
@@ -38,10 +39,15 @@ def extract_merging_data(project_url, project_name):
 
                 refactoring_changes = get_refactoring_changes(project_name, merge_parent_hash, common_ancestor_hash)
                 for refactoring_commit_hash, refactoring_type, refactoring_detail, source_class, dest_class in refactoring_changes:
-                    refactoring_commit = RefactoringCommit(commit_hash=refactoring_commit_hash,
-                                                           merge_parent=merge_parent,
-                                                           refactoring_type=refactoring_type,
-                                                           refactoring_detail=refactoring_detail,
-                                                           source_class=source_class,
-                                                           destination_class=dest_class)
-                    refactoring_commit.save()
+                    if source_class is not None:
+                        source_classes = [x.strip() for x in source_class.split(',')]
+                    else:
+                        source_classes = [None]
+                    for single_source_class in source_classes:
+                        refactoring_commit = RefactoringCommit(commit_hash=refactoring_commit_hash,
+                                                               merge_parent=merge_parent,
+                                                               refactoring_type=refactoring_type,
+                                                               refactoring_detail=refactoring_detail,
+                                                               source_class=single_source_class,
+                                                               destination_class=dest_class)
+                        refactoring_commit.save()
