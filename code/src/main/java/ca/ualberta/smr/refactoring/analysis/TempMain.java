@@ -2,16 +2,22 @@ package ca.ualberta.smr.refactoring.analysis;
 
 import ca.ualberta.smr.refactoring.analysis.database.*;
 import ca.ualberta.smr.refactoring.analysis.utils.GitUtils;
+import ca.ualberta.smr.refactoring.analysis.utils.RefactoringMinerUtils;
+import gr.uom.java.xmi.UMLOperation;
+import gr.uom.java.xmi.diff.*;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.JGitInternalException;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.javalite.activejdbc.Base;
+import org.refactoringminer.api.Refactoring;
+import org.refactoringminer.api.RefactoringType;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,7 +54,7 @@ public class TempMain {
                     .setURI(url)
                     .setDirectory(new File(PROJECTS_DIRECTORY, projectName))
                     .call();
-        } catch (JGitInternalException e){
+        } catch (JGitInternalException e) {
             System.err.println(e.getMessage());
         } catch (GitAPIException e) {
             e.printStackTrace();
@@ -56,8 +62,15 @@ public class TempMain {
     }
 
     private void analyzeProject(Project project) {
+        log(String.format("Analyzing %s's commits...", project.getName()));
+        analyzeProjectCommits(project);
+
+        log(String.format("Analyzing %s with RefMiner...", project.getName()));
+        analyzeProjectWithRefMiner(project);
+    }
+
+    private void analyzeProjectCommits(Project project) {
         try {
-            log(String.format("Analyzing %s...", project.getName()));
             GitUtils gitUtils = new GitUtils(new File(PROJECTS_DIRECTORY, project.getName()));
             int mergeCommitIndex = 0;
             for (RevCommit mergeCommit : gitUtils.getMergeCommits()) {
@@ -92,7 +105,7 @@ public class TempMain {
                                         conflictingLines[0][1], mergeCommit.getName(),
                                         mergeCommit.getParent(0).getName(), conflictingFile.getID());
                                 ConflictingRegion rightConflictingRegion = new ConflictingRegion(conflictingLines[1][0],
-                                        conflictingLines[1][1], mergeCommit.getName(),mergeCommit.getParent(1).getName(),
+                                        conflictingLines[1][1], mergeCommit.getName(), mergeCommit.getParent(1).getName(),
                                         conflictingFile.getID());
                                 leftConflictingRegion.saveIt();
                                 rightConflictingRegion.saveIt();
@@ -111,10 +124,47 @@ public class TempMain {
                     }
 
 
-
                 } catch (GitAPIException e) {
                     e.printStackTrace();
                 }
+            }
+
+        } catch (IOException | GitAPIException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    private void analyzeProjectWithRefMiner(Project project) {
+        List<ConflictingRegionHistory> historyConfRegions = ConflictingRegionHistory.findBySQL(
+                "select conflicting_region_history.* from" +
+                        "conflicting_region_history,conflicting_region, merge_commit where" +
+                        "conflicting_region_history.conflicting_region_id = conflicting_region.id and" +
+                        "conflicting_region.merge_commit = merge_commit.commit_hash and" +
+                        "merge_commit.project_id = ?", project.getID());
+
+        try {
+            RefactoringMinerUtils refMiner = new RefactoringMinerUtils(new File(PROJECTS_DIRECTORY, project.getName()),
+                    project.getURL());
+            for (ConflictingRegionHistory conflictingRegionHistory : historyConfRegions) {
+                List<Refactoring> refactorings = refMiner.detectAtCommit(conflictingRegionHistory.getCommitHash());
+
+                for (Refactoring refactoring : refactorings) {
+                    ca.ualberta.smr.refactoring.analysis.database.Refactoring refactoringModel =
+                            new ca.ualberta.smr.refactoring.analysis.database.Refactoring(
+                                    conflictingRegionHistory.getCommitHash(),
+                                    refactoring.getRefactoringType().getDisplayName(),
+                                    refactoring.toString());
+                    refactoringModel.saveIt();
+                    List<CodeRange> sourceCodeRanges = new ArrayList<>();
+                    List<CodeRange> destCodeRanges = new ArrayList<>();
+                    refMiner.getRefactoringCodeRanges(refactoring, sourceCodeRanges, destCodeRanges);
+                    sourceCodeRanges.forEach(cr -> new RefactoringRegion('s', cr.getFilePath(), cr.getStartLine(),
+                            cr.getEndLine() - cr.getStartLine(), refactoringModel.getID()).saveIt());
+                    destCodeRanges.forEach(cr -> new RefactoringRegion('d', cr.getFilePath(), cr.getStartLine(),
+                            cr.getEndLine() - cr.getStartLine(), refactoringModel.getID()).saveIt());
+                }
+
             }
         } catch (IOException | GitAPIException e) {
             e.printStackTrace();

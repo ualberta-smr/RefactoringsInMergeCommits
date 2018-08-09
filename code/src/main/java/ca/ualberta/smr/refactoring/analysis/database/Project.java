@@ -21,6 +21,10 @@ public class Project extends Model {
         return getString("name");
     }
 
+    public String getURL(){
+        return getString("url");
+    }
+
     public int getID() {
         return getInteger("id");
     }

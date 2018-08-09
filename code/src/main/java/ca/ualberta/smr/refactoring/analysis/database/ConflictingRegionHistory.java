@@ -14,4 +14,8 @@ public class ConflictingRegionHistory extends Model {
         set("commit_hash", commitHash, "old_start_line", oldStartLine, "old_length", oldLength, "new_start_line",
                 newStartLine, "new_length", newLength, "conflicting_region_id", conflictingRegionId);
     }
+
+    public String getCommitHash(){
+        return getString("commit_hash");
+    }
 }
