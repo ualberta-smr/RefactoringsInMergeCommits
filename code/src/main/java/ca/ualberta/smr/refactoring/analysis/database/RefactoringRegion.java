@@ -8,6 +8,7 @@ public class RefactoringRegion extends Model {
 
     public RefactoringRegion(){}
     public RefactoringRegion(char type, String path, int startLine, int length, int refactoringId){
-        set("type", type, "path", path, "start_line", startLine, "length", length, "refactoring_id", refactoringId);
+        set("type", String.valueOf(type).toLowerCase(), "path", path, "start_line", startLine, "length", length, "refactoring_id",
+                refactoringId);
     }
 }

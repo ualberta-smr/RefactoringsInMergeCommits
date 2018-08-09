@@ -18,4 +18,8 @@ public class ConflictingRegionHistory extends Model {
     public String getCommitHash(){
         return getString("commit_hash");
     }
+
+    public int getConflictingRegionId() {
+        return getInteger("conflicting_region_id");
+    }
 }

@@ -16,4 +16,12 @@ public class ConflictingRegion extends Model {
     public int getID() {
         return getInteger("id");
     }
+
+    public String getMergeCommit() {
+        return getString("merge_commit");
+    }
+
+    public String getMergeParent() {
+        return getString("merge_parent");
+    }
 }

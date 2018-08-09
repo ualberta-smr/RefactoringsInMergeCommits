@@ -3,15 +3,13 @@ package ca.ualberta.smr.refactoring.analysis;
 import ca.ualberta.smr.refactoring.analysis.database.*;
 import ca.ualberta.smr.refactoring.analysis.utils.GitUtils;
 import ca.ualberta.smr.refactoring.analysis.utils.RefactoringMinerUtils;
-import gr.uom.java.xmi.UMLOperation;
-import gr.uom.java.xmi.diff.*;
+import gr.uom.java.xmi.diff.CodeRange;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.JGitInternalException;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.javalite.activejdbc.Base;
 import org.refactoringminer.api.Refactoring;
-import org.refactoringminer.api.RefactoringType;
 
 import java.io.File;
 import java.io.IOException;
@@ -24,14 +22,14 @@ import java.util.Map;
 
 import static ca.ualberta.smr.refactoring.analysis.utils.Utils.log;
 
-public class TempMain {
+public class RefactoringAnalysis {
 
-    public final static String PROJECTS_DIRECTORY = "../projects";
-    public final static String PROJECTS_LIST_FILE = "../reposList.txt";
+    private final static String PROJECTS_DIRECTORY = "../projects";
+    private final static String PROJECTS_LIST_FILE = "../reposList.txt";
 
     public static void main(String[] args) throws Exception {
         Base.open();
-        new TempMain().run();
+        new RefactoringAnalysis().run();
         Base.close();
     }
 
@@ -44,7 +42,6 @@ public class TempMain {
                 new Project(projectURL, projectURL.substring(projectURL.lastIndexOf('/') + 1)).save();
         }
         Project.findAll().forEach(model -> analyzeProject((Project) model));
-//        Project.where("name = 'infinispan'").forEach(model -> analyzeProject((Project) model));
     }
 
     private void cloneProject(String url) {
@@ -137,24 +134,30 @@ public class TempMain {
 
     private void analyzeProjectWithRefMiner(Project project) {
         List<ConflictingRegionHistory> historyConfRegions = ConflictingRegionHistory.findBySQL(
-                "select conflicting_region_history.* from" +
-                        "conflicting_region_history,conflicting_region, merge_commit where" +
-                        "conflicting_region_history.conflicting_region_id = conflicting_region.id and" +
-                        "conflicting_region.merge_commit = merge_commit.commit_hash and" +
+                "select conflicting_region_history.*, conflicting_region.merge_commit, conflicting_region.merge_parent from " +
+                        "conflicting_region_history,conflicting_region, merge_commit where " +
+                        "conflicting_region_history.conflicting_region_id = conflicting_region.id and " +
+                        "conflicting_region.merge_commit = merge_commit.commit_hash and " +
                         "merge_commit.project_id = ?", project.getID());
 
         try {
             RefactoringMinerUtils refMiner = new RefactoringMinerUtils(new File(PROJECTS_DIRECTORY, project.getName()),
                     project.getURL());
             for (ConflictingRegionHistory conflictingRegionHistory : historyConfRegions) {
-                List<Refactoring> refactorings = refMiner.detectAtCommit(conflictingRegionHistory.getCommitHash());
+                if (ca.ualberta.smr.refactoring.analysis.database.Refactoring.where("commit_hash = ?",
+                        conflictingRegionHistory.getCommitHash()).size() > 0)
+                    continue;
 
+                List<Refactoring> refactorings = refMiner.detectAtCommit(conflictingRegionHistory.getCommitHash());
                 for (Refactoring refactoring : refactorings) {
+                    ConflictingRegion conflictingRegion = ConflictingRegion.findFirst("id = ?",
+                            conflictingRegionHistory.getConflictingRegionId());
                     ca.ualberta.smr.refactoring.analysis.database.Refactoring refactoringModel =
                             new ca.ualberta.smr.refactoring.analysis.database.Refactoring(
                                     conflictingRegionHistory.getCommitHash(),
                                     refactoring.getRefactoringType().getDisplayName(),
-                                    refactoring.toString());
+                                    refactoring.toString(), conflictingRegion.getMergeCommit(),
+                                    conflictingRegion.getMergeParent());
                     refactoringModel.saveIt();
                     List<CodeRange> sourceCodeRanges = new ArrayList<>();
                     List<CodeRange> destCodeRanges = new ArrayList<>();
