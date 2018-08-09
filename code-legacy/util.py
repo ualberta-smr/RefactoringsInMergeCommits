@@ -45,15 +45,15 @@ def get_merge_data(project_name, merge_commit_hash):
     java_conflicts = list()
     content_conflict_pattern = re.compile('^CONFLICT \((content)\):.*\s(\S+)$')
     file_conflict_pattern = re.compile('^CONFLICT \((.+)\):\s(\S+).+$')
-    rename_rename_patern = re.compile('CONFLICT \((rename\/rename)\): Rename "\S*"->"(\S*)".*')
+    rename_rename_pattern = re.compile('CONFLICT \((rename\/rename)\): Rename "\S*"->"(\S*)".*')
 
     for output_line in merge_output.split('\n'):
         if output_line.startswith('CONFLICT'):
 
             if content_conflict_pattern.match(output_line):
                 search_result = re.search(content_conflict_pattern, output_line)
-            elif rename_rename_patern.match(output_line):
-                search_result = re.search(rename_rename_patern, output_line)
+            elif rename_rename_pattern.match(output_line):
+                search_result = re.search(rename_rename_pattern, output_line)
             elif file_conflict_pattern.match(output_line):
                 search_result = re.search(file_conflict_pattern, output_line)
             else:

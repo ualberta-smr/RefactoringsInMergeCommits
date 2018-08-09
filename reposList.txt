@@ -1,0 +1,9 @@
+https://github.com/roboguice/roboguice
+https://github.com/OpenRefine/OpenRefine
+https://github.com/mockito/mockito
+https://github.com/jhy/jsoup
+https://github.com/jitsi/jitsi
+https://github.com/danberindei/infinispan
+https://github.com/apache/cxf
+https://github.com/clojure/clojure
+https://github.com/Bukkit/Bukkit
