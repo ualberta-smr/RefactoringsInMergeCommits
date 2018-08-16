@@ -1,11 +1,17 @@
-package ca.ualberta.smr.refactoring.analysis.utils;
+package ca.ualberta.cs.smr.refactoring.analysis.utils;
 
+import gr.uom.java.xmi.LocationInfo;
+import gr.uom.java.xmi.UMLClass;
+import gr.uom.java.xmi.UMLOperation;
 import gr.uom.java.xmi.diff.*;
+import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ResetCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.revwalk.RevCommit;
+import org.refactoringminer.RefactoringMiner;
 import org.refactoringminer.api.GitHistoryRefactoringMiner;
+import org.refactoringminer.api.Refactoring;
 import org.refactoringminer.api.RefactoringHandler;
 import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 
@@ -13,6 +19,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class RefactoringMinerUtils {
 
@@ -22,6 +29,14 @@ public class RefactoringMinerUtils {
     public RefactoringMinerUtils(File repoDir, String url) throws IOException {
         this.url = url;
         git = Git.open(repoDir);
+    }
+
+    private RefactoringMinerUtils () {
+
+    }
+
+    public static RefactoringMinerUtils getMockRefactoringMinerUtils() {
+        return new RefactoringMinerUtils();
     }
 
     public List<org.refactoringminer.api.Refactoring> detectAtCommit(String commitHash) throws GitAPIException {
@@ -39,8 +54,8 @@ public class RefactoringMinerUtils {
         return allRefactorings;
     }
 
-    public void getRefactoringCodeRanges(org.refactoringminer.api.Refactoring refactoring, List<CodeRange> sourceCodeRange,
-                                         List<CodeRange> destCodeRange) {
+    public void getRefactoringCodeRanges(org.refactoringminer.api.Refactoring refactoring,
+                                         List<CodeRange> sourceCodeRange, List<CodeRange> destCodeRange) {
         switch (refactoring.getRefactoringType()) {
             case MOVE_OPERATION:
                 sourceCodeRange.add(((MoveOperationRefactoring) refactoring).getSourceOperationCodeRangeBeforeMove());
@@ -70,15 +85,41 @@ public class RefactoringMinerUtils {
                 break;
             case EXTRACT_INTERFACE:
             case EXTRACT_SUPERCLASS:
-                destCodeRange.add(new CodeRange(((ExtractSuperclassRefactoring)refactoring).getExtractedClass()
-                        .getSourceFile(), -1, -1, -1, -1));
-                // TODO: Nikos should implement access to the set of subclasses.
+                // TODO: Ask Nikos to implement changes made to ExtractSuperclassRefactoring.
+                UMLClass extractedClass = ((ExtractSuperclassRefactoring)refactoring).getExtractedClass();
+                destCodeRange.add(extractedClass.getLocationInfo().codeRange());
+
+                Set<UMLClass> subClasses = ((ExtractSuperclassRefactoring)refactoring).getSubclassUMLSet();
+                subClasses.forEach(umlClass -> {
+                    // TODO: This doesn't look very accurate.
+                    sourceCodeRange.add(umlClass.getLocationInfo().codeRange());
+                    destCodeRange.add(umlClass.getLocationInfo().codeRange());
+                });
                 break;
             case EXTRACT_AND_MOVE_OPERATION:
+                UMLOperation extractedOperation = ((ExtractAndMoveOperationRefactoring) refactoring)
+                        .getExtractedOperation();
+                UMLOperation sourceBeforeExtraction = ((ExtractAndMoveOperationRefactoring) refactoring)
+                        .getSourceOperationBeforeExtraction();
+                UMLOperation sourceAfterExtraction = ((ExtractAndMoveOperationRefactoring) refactoring)
+                        .getSourceOperationAfterExtraction();
+
+                sourceCodeRange.add(sourceBeforeExtraction.getLocationInfo().codeRange());
+                destCodeRange.add(extractedOperation.getLocationInfo().codeRange());
+                destCodeRange.add(sourceAfterExtraction.getLocationInfo().codeRange());
+                break;
+            // TODO: Ask Nikos to implement changes made to the following classes.
             case MOVE_RENAME_CLASS:
+                sourceCodeRange.add(((MoveAndRenameClassRefactoring)refactoring).getOriginalClass().getLocationInfo().codeRange());
+                destCodeRange.add(((MoveAndRenameClassRefactoring)refactoring).getRenamedClass().getLocationInfo().codeRange());
+                break;
             case MOVE_CLASS:
+                sourceCodeRange.add(((MoveClassRefactoring)refactoring).getOriginalClass().getLocationInfo().codeRange());
+                destCodeRange.add(((MoveClassRefactoring)refactoring).getMovedClass().getLocationInfo().codeRange());
+                break;
             case RENAME_CLASS:
-                // TODO: CodeRange not implemented.
+                sourceCodeRange.add(((RenameClassRefactoring)refactoring).getOriginalClass().getLocationInfo().codeRange());
+                destCodeRange.add(((RenameClassRefactoring)refactoring).getRenamedClass().getLocationInfo().codeRange());
                 break;
         }
     }

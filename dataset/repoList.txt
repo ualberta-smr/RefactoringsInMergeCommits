@@ -1,7 +1,7 @@
-https://github.com/elastic/elasticsearch
 https://github.com/jfeinstein10/SlidingMenu
 https://github.com/JakeWharton/NotRxAndroid
 https://github.com/googlesamples/android-UniversalMusicPlayer
+https://github.com/elastic/elasticsearch
 https://github.com/square/sqlbrite
 https://github.com/deeplearning4j/deeplearning4j
 https://github.com/saulmm/Android-Material-Examples

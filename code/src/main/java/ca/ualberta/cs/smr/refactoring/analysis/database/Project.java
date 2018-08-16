@@ -1,4 +1,4 @@
-package ca.ualberta.smr.refactoring.analysis.database;
+package ca.ualberta.cs.smr.refactoring.analysis.database;
 
 import org.javalite.activejdbc.Model;
 import org.javalite.activejdbc.annotations.Table;
