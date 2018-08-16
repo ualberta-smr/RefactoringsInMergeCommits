@@ -1,7 +1,6 @@
 package ca.ualberta.cs.smr.refactoring.analysis.utils;
 
 import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.api.ResetCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.filter.RevFilter;
@@ -29,7 +28,8 @@ public class GitUtils {
 
     public GitUtils(File repoDir) throws IOException, GitAPIException {
         git = Git.open(repoDir);
-        git.reset().setMode(ResetCommand.ResetType.HARD).call();
+        Utils.runSystemCommand(git.getRepository().getWorkTree().getAbsolutePath(), false,
+                "git", "reset", "--hard");
     }
 
     private GitUtils() {
@@ -50,8 +50,11 @@ public class GitUtils {
     }
 
     public boolean isConflicting(RevCommit mergeCommit, Map<String, String> javaConflicts) throws GitAPIException {
-        git.reset().setMode(ResetCommand.ResetType.HARD).call();
-        git.checkout().setName(mergeCommit.getParent(0).getName()).call();
+        Utils.runSystemCommand(git.getRepository().getWorkTree().getAbsolutePath(), false,
+                "git", "reset", "--hard");
+        Utils.runSystemCommand(git.getRepository().getWorkTree().getAbsolutePath(), false,
+                "git", "checkout", mergeCommit.getParent(0).getName());
+//        git.checkout().setName(mergeCommit.getParent(0).getName()).call();
         String[] mergeCommand = new String[mergeCommit.getParentCount() + 1];
         mergeCommand[0] = "git";
         mergeCommand[1] = "merge";

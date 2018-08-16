@@ -87,10 +87,12 @@ public class RefactoringAnalysis {
     private void analyzeProjectCommits(Project project) {
         try {
             GitUtils gitUtils = new GitUtils(new File(PROJECTS_DIRECTORY, project.getName()));
-            int mergeCommitIndex = 0;
-            for (RevCommit mergeCommit : gitUtils.getMergeCommits()) {
-                mergeCommitIndex++;
-                Utils.log(String.format("Analyzing commit %.7s... (%d/?)", mergeCommit.getName(), mergeCommitIndex));
+            List<RevCommit> mergeCommits = new ArrayList<>();
+            gitUtils.getMergeCommits().forEach(mergeCommits::add);
+            for (int i = 0; i < mergeCommits.size(); i++) {
+                RevCommit mergeCommit = mergeCommits.get(i);
+                Utils.log(String.format("Analyzing commit %.7s... (%d/%d)", mergeCommit.getName(), i + 1,
+                        mergeCommits.size()));
 
                 // Skip this commit if it already exists in the database.
                 if (MergeCommit.where("commit_hash = ?", mergeCommit.getName()).size() > 0) continue;
