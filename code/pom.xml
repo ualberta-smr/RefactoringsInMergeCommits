@@ -3,9 +3,9 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
-    <groupId>ca.ualberta.smr</groupId>
+    <groupId>ca.ualberta.cs.smr</groupId>
     <artifactId>refactoring-analysis</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0</version>
     <name>Refactoring Analysis</name>
     <packaging>jar</packaging>
 
@@ -24,8 +24,43 @@
                     <source>1.8</source>
                     <target>1.8</target>
                     <encoding>UTF-8</encoding>
+                    <!--<includes>-->
+                        <!--<include>${basedir}/lib/*.jar</include>-->
+                    <!--</includes>-->
                 </configuration>
             </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>1.6.0</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <executable>mvn</executable>
+                    <mainClass>ca.ualberta.cs.smr.refactoring.analysis.RefactoringAnalysis</mainClass>
+                </configuration>
+            </plugin>
+
+            <!--<plugin>-->
+                <!--&lt;!&ndash; Build an executable JAR &ndash;&gt;-->
+                <!--<groupId>org.apache.maven.plugins</groupId>-->
+                <!--<artifactId>maven-jar-plugin</artifactId>-->
+                <!--<version>3.1.0</version>-->
+                <!--<configuration>-->
+                    <!--<archive>-->
+                        <!--<manifest>-->
+                            <!--<mainClass>ca.ualberta.cs.smr.refactoring.analysis.RefactoringAnalysis</mainClass>-->
+                        <!--</manifest>-->
+                    <!--</archive>-->
+                <!--</configuration>-->
+            <!--</plugin>-->
+
             <plugin>
                 <groupId>org.javalite</groupId>
                 <artifactId>activejdbc-instrumentation</artifactId>
@@ -40,33 +75,218 @@
                 </executions>
             </plugin>
 
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.18.1</version>
-                <configuration>
-                    <reportFormat>brief</reportFormat>
-                    <trimStackTrace>true</trimStackTrace>
-                    <useFile>false</useFile>
-                    <includes>
-                        <include>**/*Spec*.java</include>
-                        <include>**/*Test*.java</include>
-                    </includes>
-                    <excludes>
-                        <exclude>**/helpers/*</exclude>
-                        <exclude>**/*$*</exclude>
-                    </excludes>
-                </configuration>
-            </plugin>
+            <!--<plugin>-->
+                <!--<groupId>org.apache.maven.plugins</groupId>-->
+                <!--<artifactId>maven-surefire-plugin</artifactId>-->
+                <!--<version>2.18.1</version>-->
+                <!--<configuration>-->
+                    <!--<reportFormat>brief</reportFormat>-->
+                    <!--<trimStackTrace>true</trimStackTrace>-->
+                    <!--<useFile>false</useFile>-->
+                    <!--<includes>-->
+                        <!--<include>**/*Spec*.java</include>-->
+                        <!--<include>**/*Test*.java</include>-->
+                    <!--</includes>-->
+                    <!--<excludes>-->
+                        <!--<exclude>**/helpers/*</exclude>-->
+                        <!--<exclude>**/*$*</exclude>-->
+                    <!--</excludes>-->
+                <!--</configuration>-->
+            <!--</plugin>-->
         </plugins>
     </build>
     <dependencies>
+
+        <!-- RefactoringMiner and its dependencies -->
+
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.12</version>
-            <scope>test</scope>
+            <groupId>org.refactoringminer</groupId>
+            <artifactId>RefactoringMiner</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/RefactoringMiner.jar</systemPath>
         </dependency>
+
+
+        <dependency>
+            <groupId>org.eclipse.jgit</groupId>
+            <artifactId>org.eclipse.jgit</artifactId>
+            <version>5.0.2.201807311906-r</version>
+        </dependency>
+
+
+        <dependency>
+            <groupId>com.jcabi</groupId>
+            <artifactId>jcabi-github</artifactId>
+            <version>0.17</version>
+        </dependency>
+
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>1.7.7</version>
+        </dependency>
+
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>2.8.4</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.8.4</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>2.8.4</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.core</groupId>
+            <artifactId>commands</artifactId>
+            <version>3.7.0.v20150422-0725</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/org.eclipse.core.commands_3.7.0.v20150422-0725.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.core</groupId>
+            <artifactId>contenttype</artifactId>
+            <version>3.5.0.v20150421-2214</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/org.eclipse.core.contenttype_3.5.0.v20150421-2214.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.core</groupId>
+            <artifactId>expressions</artifactId>
+            <version>3.5.0.v20150421-2214</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/org.eclipse.core.expressions_3.5.0.v20150421-2214.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.core</groupId>
+            <artifactId>filesystem</artifactId>
+            <version>1.5.0.v20150725-1910</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/org.eclipse.core.filesystem_1.5.0.v20150725-1910.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.core</groupId>
+            <artifactId>jobs</artifactId>
+            <version>3.7.0.v20150330-2103</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/org.eclipse.core.jobs_3.7.0.v20150330-2103.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.core</groupId>
+            <artifactId>resources</artifactId>
+            <version>3.10.1.v20150725-1910</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/org.eclipse.core.resources_3.10.1.v20150725-1910.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.core</groupId>
+            <artifactId>runtime</artifactId>
+            <version>3.11.1.v20150903-1804</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/org.eclipse.core.runtime_3.11.1.v20150903-1804.jar</systemPath>
+        </dependency>
+
+
+        <dependency>
+            <groupId>org.eclipse.equinox</groupId>
+            <artifactId>app</artifactId>
+            <version>1.3.300.v20150423-1356</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/org.eclipse.equinox.app_1.3.300.v20150423-1356.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.equinox</groupId>
+            <artifactId>common</artifactId>
+            <version>3.7.0.v20150402-1709</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/org.eclipse.equinox.common_3.7.0.v20150402-1709.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.equinox</groupId>
+            <artifactId>preferences</artifactId>
+            <version>3.5.300.v20150408-1437</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/org.eclipse.equinox.preferences_3.5.300.v20150408-1437.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.equinox.registry_3.6.0.v20150318-1503.jar</groupId>
+            <artifactId>registry</artifactId>
+            <version>3.6.0.v20150318-1503</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/org.eclipse.equinox.registry_3.6.0.v20150318-1503.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.jdt</groupId>
+            <artifactId>core</artifactId>
+            <version>3.12.1.v20160829-0950</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/org.eclipse.jdt.core_3.12.1.v20160829-0950.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse</groupId>
+            <artifactId>osgi</artifactId>
+            <version>3.10.101.v20150820-1432</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/org.eclipse.osgi_3.10.101.v20150820-1432.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse</groupId>
+            <artifactId>text</artifactId>
+            <version>3.5.400.v20150505-1044</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/org.eclipse.text_3.5.400.v20150505-1044.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>codec</artifactId>
+            <version>1.10</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/commons-codec-1.10.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>lang</artifactId>
+            <version>2.6</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/commons-lang-2.6.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github</groupId>
+            <artifactId>api</artifactId>
+            <version>1.84</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/github-api-1.84.jar</systemPath>
+        </dependency>
+
+
+        <!-- End of RefactoringMiner and its dependencies -->
+
 
         <dependency>
             <groupId>org.javalite</groupId>
@@ -93,11 +313,6 @@
         </dependency>
 
         <dependency>
-            <groupId>org.eclipse.jgit</groupId>
-            <artifactId>org.eclipse.jgit</artifactId>
-            <version>5.0.2.201807311906-r</version>
-        </dependency>
-        <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
             <version>RELEASE</version>
@@ -107,28 +322,28 @@
     </dependencies>
 
 
-    <repositories>
-        <repository>
-            <id>snapshots1</id>
-            <name>JavaLite Snapshots1</name>
-            <url>http://repo.javalite.io/</url>
-            <snapshots>
-                <enabled>true</enabled>
-                <updatePolicy>always</updatePolicy>
-                <checksumPolicy>warn</checksumPolicy>
-            </snapshots>
-        </repository>
-    </repositories>
-    <pluginRepositories>
-        <pluginRepository>
-            <id>snapshots2</id>
-            <name>JavaLite Snapshots2</name>
-            <url>http://repo.javalite.io/</url>
-            <snapshots>
-                <enabled>true</enabled>
-                <updatePolicy>always</updatePolicy>
-                <checksumPolicy>warn</checksumPolicy>
-            </snapshots>
-        </pluginRepository>
-    </pluginRepositories>
+    <!--<repositories>-->
+        <!--<repository>-->
+            <!--<id>snapshots1</id>-->
+            <!--<name>JavaLite Snapshots1</name>-->
+            <!--<url>http://repo.javalite.io/</url>-->
+            <!--<snapshots>-->
+                <!--<enabled>true</enabled>-->
+                <!--<updatePolicy>always</updatePolicy>-->
+                <!--<checksumPolicy>warn</checksumPolicy>-->
+            <!--</snapshots>-->
+        <!--</repository>-->
+    <!--</repositories>-->
+    <!--<pluginRepositories>-->
+        <!--<pluginRepository>-->
+            <!--<id>snapshots2</id>-->
+            <!--<name>JavaLite Snapshots2</name>-->
+            <!--<url>http://repo.javalite.io/</url>-->
+            <!--<snapshots>-->
+                <!--<enabled>true</enabled>-->
+                <!--<updatePolicy>always</updatePolicy>-->
+                <!--<checksumPolicy>warn</checksumPolicy>-->
+            <!--</snapshots>-->
+        <!--</pluginRepository>-->
+    <!--</pluginRepositories>-->
 </project>

@@ -2,7 +2,11 @@ package ca.ualberta.cs.smr.refactoring.analysis.utils;
 
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.errors.IncorrectObjectTypeException;
+import org.eclipse.jgit.errors.MissingObjectException;
+import org.eclipse.jgit.errors.StopWalkException;
 import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.revwalk.filter.RevFilter;
 
 import java.io.File;
@@ -40,13 +44,24 @@ public class GitUtils {
         return new GitUtils();
     }
 
-    public Iterable<RevCommit> getMergeCommits() {
+    public List<RevCommit> getMergeCommits() {
+        List<RevCommit> mergeCommits = new ArrayList<>();
         try {
-            return git.log().all().setRevFilter(RevFilter.ONLY_MERGES).call();
+             git.log().all().setRevFilter(new RevFilter() {
+                 @Override
+                 public boolean include(RevWalk revWalk, RevCommit revCommit) throws StopWalkException, MissingObjectException, IncorrectObjectTypeException, IOException {
+                     return revCommit.getParentCount() == 2;
+                 }
+
+                 @Override
+                 public RevFilter clone() {
+                     return this;
+                 }
+             }).call().forEach(mergeCommits::add);
         } catch (IOException | GitAPIException e) {
             e.printStackTrace();
         }
-        return new ArrayList<>();
+        return mergeCommits;
     }
 
     public boolean isConflicting(RevCommit mergeCommit, Map<String, String> javaConflicts) throws GitAPIException {

@@ -8,17 +8,28 @@ public class ConflictingRegion extends Model {
 
     public ConflictingRegion(){}
 
-    public ConflictingRegion(int startLine, int length, String path, int mergeParentId, int conflictingFileId){
-        set("start_line", startLine, "length", length, "path", path, "merge_parent_id", mergeParentId,
-                "conflicting_file_id", conflictingFileId);
+    public ConflictingRegion(int startLineParent1, int lengthParent1, String pathParent1,
+                             int startLineParent2, int lengthParent2, String pathParent2,
+                             ConflictingJavaFile conflictingJavaFile) {
+        set("parent_1_start_line", startLineParent1, "parent_1_length", lengthParent1, "parent_1_path", pathParent1,
+                "parent_2_start_line", startLineParent2, "parent_2_length", lengthParent2, "parent_2_path", pathParent2,
+                "conflicting_java_file_id", conflictingJavaFile.getId(),
+                "merge_commit_id", conflictingJavaFile.getMergeCommitId(),
+                "project_id", conflictingJavaFile.getProjectId());
     }
 
-    public int getID() {
-        return getInteger("id");
+    public int getConflictingJavaFileId() {
+        return getInteger("conflicting_java_file_id");
     }
 
-    public int getMergeParentId() {
-        return getInteger("merge_parent_id");
+
+    public int getMergeCommitId() {
+        return getInteger("merge_commit_id");
+    }
+
+
+    public int getProjectId() {
+        return getInteger("project_id");
     }
 
 }

@@ -1,17 +1,13 @@
 package ca.ualberta.cs.smr.refactoring.analysis.utils;
 
-import gr.uom.java.xmi.LocationInfo;
 import gr.uom.java.xmi.UMLClass;
 import gr.uom.java.xmi.UMLOperation;
 import gr.uom.java.xmi.diff.*;
-import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ResetCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.revwalk.RevCommit;
-import org.refactoringminer.RefactoringMiner;
 import org.refactoringminer.api.GitHistoryRefactoringMiner;
-import org.refactoringminer.api.Refactoring;
 import org.refactoringminer.api.RefactoringHandler;
 import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 
