@@ -32,7 +32,7 @@ public class GitUtils {
 
     public GitUtils(File repoDir) throws IOException, GitAPIException {
         git = Git.open(repoDir);
-        Utils.runSystemCommand(git.getRepository().getWorkTree().getAbsolutePath(), false,
+        Utils.runSystemCommand(git.getRepository().getWorkTree().getAbsolutePath(),
                 "git", "reset", "--hard");
     }
 
@@ -64,10 +64,10 @@ public class GitUtils {
         return mergeCommits;
     }
 
-    public boolean isConflicting(RevCommit mergeCommit, Map<String, String> javaConflicts) throws GitAPIException {
-        Utils.runSystemCommand(git.getRepository().getWorkTree().getAbsolutePath(), false,
+    public boolean isConflicting(RevCommit mergeCommit, Map<String, String> javaConflicts) throws Exception {
+        Utils.runSystemCommand(git.getRepository().getWorkTree().getAbsolutePath(),
                 "git", "reset", "--hard");
-        Utils.runSystemCommand(git.getRepository().getWorkTree().getAbsolutePath(), false,
+        Utils.runSystemCommand(git.getRepository().getWorkTree().getAbsolutePath(),
                 "git", "checkout", mergeCommit.getParent(0).getName());
 //        git.checkout().setName(mergeCommit.getParent(0).getName()).call();
         String[] mergeCommand = new String[mergeCommit.getParentCount() + 1];
@@ -76,13 +76,17 @@ public class GitUtils {
         for (int i = 2; i < mergeCommand.length; i++) {
             mergeCommand[i] = mergeCommit.getParent(i - 1).getName();
         }
-        String mergeOutput = Utils.runSystemCommand(git.getRepository().getWorkTree().getAbsolutePath(), false,
+        String mergeOutput = Utils.runSystemCommand(git.getRepository().getWorkTree().getAbsolutePath(),
                 mergeCommand);
 
         return isConflictingFromMergeOutput(mergeOutput, javaConflicts);
     }
 
-    public boolean isConflictingFromMergeOutput(String mergeOutput, Map<String, String> javaConflicts) {
+    public boolean isConflictingFromMergeOutput(String mergeOutput, Map<String, String> javaConflicts) throws
+            Exception {
+        if (mergeOutput.toLowerCase().startsWith("fatal:")) {
+            throw new Exception("There was a problem while checking for merge conflict:\n" + mergeOutput);
+        }
         for (String line : mergeOutput.split("\n")) {
             if (!line.startsWith("CONFLICT")) continue;
 
@@ -104,7 +108,7 @@ public class GitUtils {
                 conflictType = "Undetected";
                 filePath = line;
             } else {
-                Utils.log("Unknown git conflict: " + line);
+                Utils.log(null, "Unknown git conflict: " + line);
                 continue;
             }
 
@@ -116,7 +120,7 @@ public class GitUtils {
 
     public void getConflictingRegions(String path, String[] conflictingRegionPaths,
                                       List<int[][]> conflictingRegions) {
-        String diffOutput = Utils.runSystemCommand(git.getRepository().getWorkTree().getAbsolutePath(), false,
+        String diffOutput = Utils.runSystemCommand(git.getRepository().getWorkTree().getAbsolutePath(),
                 "git", "diff", "-U0", path);
         getConflictingRegionsFromDiffOutput(diffOutput, conflictingRegionPaths, conflictingRegions);
     }
@@ -145,7 +149,7 @@ public class GitUtils {
                                                               String path, int[] conflictingRegion) {
         String fileRange = conflictingRegion[0] + "," + (conflictingRegion[0] + conflictingRegion[1]) + ":" + path;
         String commitRange = commitNotReachableFrom + ".." + commitReachableFrom;
-        String logOutput = Utils.runSystemCommand(git.getRepository().getWorkTree().getAbsolutePath(), false,
+        String logOutput = Utils.runSystemCommand(git.getRepository().getWorkTree().getAbsolutePath(),
                 "git", "log", "--topo-order", "-u", "-L", fileRange, commitRange);
         return getConflictingRegionHistoryFromGitOutput(logOutput);
     }

@@ -1,3 +1,4 @@
+https://github.com/druid-io/druid
 https://github.com/elastic/elasticsearch
 https://github.com/jfeinstein10/SlidingMenu
 https://github.com/JakeWharton/NotRxAndroid
@@ -13,7 +14,6 @@ https://github.com/wasabeef/recyclerview-animators
 https://github.com/ikew0ng/SwipeBackLayout
 https://github.com/wasabeef/RecyclerViewAnimators
 https://github.com/googlesamples/android-testing
-https://github.com/druid-io/druid
 https://github.com/rey5137/Material
 https://github.com/theDazzler/droidicon
 https://github.com/frogermcs/InstaMaterial

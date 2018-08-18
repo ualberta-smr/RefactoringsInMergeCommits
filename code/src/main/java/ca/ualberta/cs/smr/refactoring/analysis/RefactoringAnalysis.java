@@ -6,8 +6,6 @@ import ca.ualberta.cs.smr.refactoring.analysis.utils.RefactoringMinerUtils;
 import ca.ualberta.cs.smr.refactoring.analysis.utils.Utils;
 import gr.uom.java.xmi.diff.CodeRange;
 import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.api.errors.JGitInternalException;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.javalite.activejdbc.Base;
 import org.refactoringminer.api.Refactoring;
@@ -18,46 +16,86 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
 
 public class RefactoringAnalysis {
 
     public final static String PROJECTS_DIRECTORY = "../projects";
     public final static String PROJECTS_LIST_FILE = "../reposList.txt";
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
+        try {
+            new RefactoringAnalysis().runParallel();
+        } catch (Exception e) {
+            Utils.log(null, e);
+            e.printStackTrace();
+        }
+    }
+
+
+    private void runParallel() throws Exception {
+        List<String> projectURLs = Files.readAllLines(Paths.get(PROJECTS_LIST_FILE));
+
+        int parallelism = Math.max(1, (int) (Runtime.getRuntime().availableProcessors() * .75));
+        ForkJoinPool forkJoinPool = null;
+        try {
+            forkJoinPool = new ForkJoinPool(parallelism);
+            forkJoinPool.submit(() ->
+                    projectURLs.parallelStream().forEach(s -> {
+                        Base.open();
+                        cloneAndAnalyzeProject(s);
+                        Base.close();
+                    })
+            ).get();
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+        } finally {
+            if (forkJoinPool != null) {
+                forkJoinPool.shutdown();
+            }
+        }
+    }
+
+    private void run() throws Exception {
         Base.open();
-        new RefactoringAnalysis().run();
+        Files.readAllLines(Paths.get(PROJECTS_LIST_FILE)).forEach(this::cloneAndAnalyzeProject);
         Base.close();
     }
 
-
-    private void run() throws Exception {
-        List<String> projectURLs = Files.readAllLines(Paths.get(PROJECTS_LIST_FILE));
-        for (String projectURL : projectURLs) {
+    private void cloneAndAnalyzeProject(String projectURL) {
+        String projectName = projectURL.substring(projectURL.lastIndexOf('/') + 1);
+        try {
             cloneProject(projectURL);
+        } catch (Exception e) {
+            Utils.log(projectName, e);
+            e.printStackTrace();
+        }
+
+        try {
             Project project = Project.findFirst("url = ?", projectURL);
             if (project == null) {
-                project = new Project(projectURL, projectURL.substring(projectURL.lastIndexOf('/') + 1));
+                project = new Project(projectURL, projectName);
                 project.saveIt();
             }
+
             analyzeProject(project);
-            removeProject(project.getName());
+            Utils.log(projectName, "Finished the analysis, removing the repository...");
+            removeProject(projectName);
+            Utils.log(projectName, "Done with " + projectName);
+        } catch (Exception e) {
+            Utils.log(projectName, e);
+            e.printStackTrace();
         }
     }
 
-    private void cloneProject(String url) {
-        try {
-            String projectName = url.substring(url.lastIndexOf('/') + 1);
-            Utils.log(String.format("Cloning %s...", projectName));
-            Git.cloneRepository()
-                    .setURI(url)
-                    .setDirectory(new File(PROJECTS_DIRECTORY, projectName))
-                    .call();
-        } catch (JGitInternalException e) {
-            System.err.println(e.getMessage());
-        } catch (GitAPIException e) {
-            e.printStackTrace();
-        }
+    private void cloneProject(String url) throws Exception {
+        String projectName = url.substring(url.lastIndexOf('/') + 1);
+        Utils.log(projectName, String.format("Cloning %s...", projectName));
+        Git.cloneRepository()
+                .setURI(url)
+                .setDirectory(new File(PROJECTS_DIRECTORY, projectName))
+                .call();
     }
 
     private void removeProject(String projectName) {
@@ -71,42 +109,41 @@ public class RefactoringAnalysis {
         }
     }
 
-    private void analyzeProject(Project project) {
-        Utils.log(String.format("Analyzing %s's commits...", project.getName()));
+    private void analyzeProject(Project project) throws Exception {
+        Utils.log(project.getName(), String.format("Analyzing %s's commits...", project.getName()));
         analyzeProjectCommits(project);
 
-        Utils.log(String.format("Analyzing %s with RefMiner...", project.getName()));
+        Utils.log(project.getName(), String.format("Analyzing %s with RefMiner...", project.getName()));
         analyzeProjectWithRefMiner(project);
     }
 
-    private void analyzeProjectCommits(Project project) {
-        try {
-            GitUtils gitUtils = new GitUtils(new File(PROJECTS_DIRECTORY, project.getName()));
-            List<RevCommit> mergeCommits = gitUtils.getMergeCommits();
-            for (int i = 0; i < mergeCommits.size(); i++) {
-                RevCommit mergeCommit = mergeCommits.get(i);
-                Utils.log(String.format("Analyzing commit %.7s... (%d/%d)", mergeCommit.getName(), i + 1,
-                        mergeCommits.size()));
+    private void analyzeProjectCommits(Project project) throws Exception {
+        GitUtils gitUtils = new GitUtils(new File(PROJECTS_DIRECTORY, project.getName()));
+        List<RevCommit> mergeCommits = gitUtils.getMergeCommits();
+        for (int i = 0; i < mergeCommits.size(); i++) {
+            RevCommit mergeCommit = mergeCommits.get(i);
+            Utils.log(project.getName(), String.format("Analyzing commit %.7s... (%d/%d)", mergeCommit.getName(),
+                    i + 1, mergeCommits.size()));
 
-                // Skip this commit if it already exists in the database.
-                if (MergeCommit.where("commit_hash = ?", mergeCommit.getName()).size() > 0) continue;
-
-                try {
-                    Map<String, String> conflictingJavaFiles = new HashMap<>();
-                    boolean isConflicting = gitUtils.isConflicting(mergeCommit, conflictingJavaFiles);
-
-                    MergeCommit mergeCommitModel = new MergeCommit(mergeCommit.getName(), isConflicting,
-                            mergeCommit.getParent(0).getName(), mergeCommit.getParent(1).getName(), project);
-                    mergeCommitModel.saveIt();
-
-                    extractConflictingRegions(gitUtils, mergeCommitModel, conflictingJavaFiles);
-                } catch (GitAPIException e) {
-                    e.printStackTrace();
-                }
+            // Skip this commit if it already exists in the database.
+            if (MergeCommit.where("commit_hash = ?", mergeCommit.getName()).size() > 0) {
+                Utils.log(project.getName(), "Already exists in the database, skipping...");
+                continue;
             }
 
-        } catch (IOException | GitAPIException e) {
-            e.printStackTrace();
+            try {
+                Map<String, String> conflictingJavaFiles = new HashMap<>();
+                boolean isConflicting = gitUtils.isConflicting(mergeCommit, conflictingJavaFiles);
+
+                MergeCommit mergeCommitModel = new MergeCommit(mergeCommit.getName(), isConflicting,
+                        mergeCommit.getParent(0).getName(), mergeCommit.getParent(1).getName(), project);
+                mergeCommitModel.saveIt();
+
+                extractConflictingRegions(gitUtils, mergeCommitModel, conflictingJavaFiles);
+            } catch (Exception e) {
+                Utils.log(project.getName(), e);
+                e.printStackTrace();
+            }
         }
     }
 
@@ -123,8 +160,7 @@ public class RefactoringAnalysis {
                 List<int[][]> conflictingRegions = new ArrayList<>();
                 gitUtils.getConflictingRegions(path, conflictingRegionPaths, conflictingRegions);
 
-                for (int i = 0; i < conflictingRegions.size(); i++) {
-                    int[][] conflictingLines = conflictingRegions.get(i);
+                for (int[][] conflictingLines : conflictingRegions) {
                     ConflictingRegion conflictingRegion = new ConflictingRegion(
                             conflictingLines[0][0], conflictingLines[0][1], conflictingRegionPaths[0],
                             conflictingLines[1][0], conflictingLines[1][1], conflictingRegionPaths[1],
@@ -161,11 +197,14 @@ public class RefactoringAnalysis {
         try {
             RefactoringMinerUtils refMinerUtils = new RefactoringMinerUtils(new File(PROJECTS_DIRECTORY, project.getName()),
                     project.getURL());
-            for (ConflictingRegionHistory conflictingRegionHistory : historyConfRegions) {
+            for (int i = 0; i < historyConfRegions.size(); i++) {
+                ConflictingRegionHistory conflictingRegionHistory = historyConfRegions.get(i);
                 if (ca.ualberta.cs.smr.refactoring.analysis.database.Refactoring.where("commit_hash = ?",
                         conflictingRegionHistory.getCommitHash()).size() > 0)
                     continue;
 
+                Utils.log(project.getName(), String.format("Analyzing commit %.7s with RefMiner... (%d/%d)",
+                        conflictingRegionHistory.getCommitHash(), i + 1, historyConfRegions.size()));
                 List<Refactoring> refactorings = refMinerUtils.detectAtCommit(conflictingRegionHistory.getCommitHash());
                 for (Refactoring refactoring : refactorings) {
                     ca.ualberta.cs.smr.refactoring.analysis.database.Refactoring refactoringModel =
@@ -188,7 +227,8 @@ public class RefactoringAnalysis {
                 }
 
             }
-        } catch (IOException | GitAPIException e) {
+        } catch (Exception e) {
+            Utils.log(project.getName(), e);
             e.printStackTrace();
         }
     }

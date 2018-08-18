@@ -12,7 +12,7 @@ class GitUtilsTest {
     private GitUtils GIT_UTILS_TEST = GitUtils.getMockInstance();
 
     @Test
-    void isConflictingFromMergeOutput() {
+    void isConflictingFromMergeOutput() throws Exception {
         String mergeOutput = "Auto-merging roboguice/src/test/java/roboguice/event/ObservesTypeListenerTest.java\n" +
                 "CONFLICT (content): Merge conflict in roboguice/src/test/java/roboguice/event/ObservesTypeListenerTest.java\n" +
                 "Auto-merging roboguice/src/main/java/roboguice/service/RoboService.java\n" +

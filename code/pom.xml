@@ -121,14 +121,6 @@
             <version>0.17</version>
         </dependency>
 
-
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-            <version>1.7.7</version>
-        </dependency>
-
-
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
@@ -202,7 +194,6 @@
             <scope>system</scope>
             <systemPath>${basedir}/lib/org.eclipse.core.runtime_3.11.1.v20150903-1804.jar</systemPath>
         </dependency>
-
 
         <dependency>
             <groupId>org.eclipse.equinox</groupId>
@@ -285,8 +276,13 @@
         </dependency>
 
 
-        <!-- End of RefactoringMiner and its dependencies -->
+        <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-log4j12</artifactId>
+        <version>1.7.7</version>
+        </dependency>
 
+        <!-- End of RefactoringMiner and its dependencies -->
 
         <dependency>
             <groupId>org.javalite</groupId>
@@ -306,11 +302,6 @@
             <version>5.1.34</version>
         </dependency>
 
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
-            <version>1.7.9</version>
-        </dependency>
 
         <dependency>
             <groupId>org.junit.jupiter</groupId>

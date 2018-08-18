@@ -14,17 +14,35 @@ import java.util.Date;
 public class Utils {
 
     private static final boolean LOG_TO_FILE  = true;
-    private static final String LOG_PATH = "analysis_log.txt";
+    private static final String LOG_FILE = "analysis_log.txt";
 
-    public static void log(String message) {
+    public static void log(String projectName, Object message) {
         String timeStamp = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss z").format(new Date());
-        String logLine = timeStamp + " " + message;
-        System.out.println(logLine);
+        String logMessage = timeStamp + " ";
+        if (message instanceof String){
+            logMessage += (String) message;
+        } else if (message instanceof Exception) {
+            logMessage += ((Exception) message).getMessage() + "\n";
+            StringBuilder stackBuilder = new StringBuilder();
+            StackTraceElement[] stackTraceElements = ((Exception) message).getStackTrace();
+            for (int i = 0; i < stackTraceElements.length; i++) {
+                StackTraceElement stackTraceElement = stackTraceElements[i];
+                stackBuilder.append(stackTraceElement.toString());
+                if (i < stackTraceElements.length - 1) stackBuilder.append("\n");
+            }
+            logMessage += stackBuilder.toString();
+        } else {
+            logMessage = message.toString();
+        }
+        System.out.println(logMessage);
 
         if (LOG_TO_FILE) {
+            String logPath = LOG_FILE;
+            if (projectName != null && !projectName.trim().equals("")) logPath = projectName;
             try {
-                Files.write(Paths.get(LOG_PATH), Arrays.asList(logLine), StandardOpenOption.CREATE,
-                        StandardOpenOption.APPEND);
+                new File("logs").mkdirs();
+                Files.write(Paths.get("logs/" + logPath + ".log"), Arrays.asList(logMessage),
+                        StandardOpenOption.CREATE, StandardOpenOption.APPEND);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -32,15 +50,15 @@ public class Utils {
     }
 
 
-    public static String runSystemCommand(String dir, boolean verbose, String... commands) {
+    public static String runSystemCommand(String dir, String... commands) {
         StringBuilder builder = new StringBuilder();
         try {
-            if (verbose) {
-                for (String command : commands) {
-                    System.out.print(command + " ");
-                }
-                System.out.println();
-            }
+//            if (verbose) {
+//                for (String command : commands) {
+//                    System.out.print(command + " ");
+//                }
+//                System.out.println();
+//            }
             Runtime rt = Runtime.getRuntime();
             Process proc = rt.exec(commands, null, new File(dir));
 
@@ -54,13 +72,13 @@ public class Utils {
             while ((s = stdInput.readLine()) != null) {
                 builder.append(s);
                 builder.append("\n");
-                if (verbose) log(s);
+//                if (verbose) log(s);
             }
 
             while ((s = stdError.readLine()) != null) {
                 builder.append(s);
                 builder.append("\n");
-                if (verbose) log(s);
+//                if (verbose) log(s);
             }
         } catch (IOException e) {
             e.printStackTrace();
