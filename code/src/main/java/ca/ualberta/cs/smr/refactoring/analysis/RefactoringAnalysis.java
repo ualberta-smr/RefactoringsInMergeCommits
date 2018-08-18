@@ -21,21 +21,41 @@ import java.util.concurrent.ForkJoinPool;
 
 public class RefactoringAnalysis {
 
-    public final static String PROJECTS_DIRECTORY = "../projects";
-    public final static String PROJECTS_LIST_FILE = "../reposList.txt";
+    private String projectsDirectory = "../projects";
+    private String repoListFile = "../reposList.txt";
 
     public static void main(String[] args) {
+            RefactoringAnalysis refAnalysis;
+            if (args.length == 1) {
+                refAnalysis = new RefactoringAnalysis(args[0]);
+            } else if (args.length == 2) {
+                refAnalysis = new RefactoringAnalysis(args[0], args[1]);
+            } else {
+                refAnalysis = new RefactoringAnalysis();
+            }
+
         try {
-            new RefactoringAnalysis().runParallel();
+            refAnalysis.runParallel();
         } catch (Exception e) {
             Utils.log(null, e);
             e.printStackTrace();
         }
     }
 
+    public RefactoringAnalysis() {}
+
+    public RefactoringAnalysis(String repoListFile) {
+        this.repoListFile = repoListFile;
+        this.projectsDirectory = "projects";
+    }
+
+    public RefactoringAnalysis(String repoListFile, String projectsDirectory) {
+        this.repoListFile = repoListFile;
+        this.projectsDirectory = projectsDirectory;
+    }
 
     private void runParallel() throws Exception {
-        List<String> projectURLs = Files.readAllLines(Paths.get(PROJECTS_LIST_FILE));
+        List<String> projectURLs = Files.readAllLines(Paths.get(repoListFile));
 
         int parallelism = Math.max(1, (int) (Runtime.getRuntime().availableProcessors() * .75));
         ForkJoinPool forkJoinPool = null;
@@ -59,7 +79,7 @@ public class RefactoringAnalysis {
 
     private void run() throws Exception {
         Base.open();
-        Files.readAllLines(Paths.get(PROJECTS_LIST_FILE)).forEach(this::cloneAndAnalyzeProject);
+        Files.readAllLines(Paths.get(repoListFile)).forEach(this::cloneAndAnalyzeProject);
         Base.close();
     }
 
@@ -94,13 +114,13 @@ public class RefactoringAnalysis {
         Utils.log(projectName, String.format("Cloning %s...", projectName));
         Git.cloneRepository()
                 .setURI(url)
-                .setDirectory(new File(PROJECTS_DIRECTORY, projectName))
+                .setDirectory(new File(projectsDirectory, projectName))
                 .call();
     }
 
     private void removeProject(String projectName) {
         try {
-            Files.walk(Paths.get(new File(PROJECTS_DIRECTORY, projectName).getAbsolutePath()))
+            Files.walk(Paths.get(new File(projectsDirectory, projectName).getAbsolutePath()))
                     .sorted(Comparator.reverseOrder())
                     .map(Path::toFile)
                     .forEach(File::delete);
@@ -118,7 +138,7 @@ public class RefactoringAnalysis {
     }
 
     private void analyzeProjectCommits(Project project) throws Exception {
-        GitUtils gitUtils = new GitUtils(new File(PROJECTS_DIRECTORY, project.getName()));
+        GitUtils gitUtils = new GitUtils(new File(projectsDirectory, project.getName()));
         List<RevCommit> mergeCommits = gitUtils.getMergeCommits();
         for (int i = 0; i < mergeCommits.size(); i++) {
             RevCommit mergeCommit = mergeCommits.get(i);
@@ -195,7 +215,7 @@ public class RefactoringAnalysis {
                 ConflictingRegionHistory.where("project_id = ?", project.getId());
 
         try {
-            RefactoringMinerUtils refMinerUtils = new RefactoringMinerUtils(new File(PROJECTS_DIRECTORY, project.getName()),
+            RefactoringMinerUtils refMinerUtils = new RefactoringMinerUtils(new File(projectsDirectory, project.getName()),
                     project.getURL());
             for (int i = 0; i < historyConfRegions.size(); i++) {
                 ConflictingRegionHistory conflictingRegionHistory = historyConfRegions.get(i);
