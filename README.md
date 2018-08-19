@@ -6,6 +6,7 @@ This project analyzes merge commits in git repositries and determines whether re
 * Linux or macOS
 * git
 * Java 8
+* Maven
 * MySQL 5.7
 
 ## How to run
