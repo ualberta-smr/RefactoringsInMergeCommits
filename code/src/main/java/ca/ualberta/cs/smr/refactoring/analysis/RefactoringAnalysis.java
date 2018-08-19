@@ -39,7 +39,7 @@ public class RefactoringAnalysis {
         try {
             DatabaseUtils.createDatabase();
             refAnalysis.runParallel();
-        } catch (Exception e) {
+        } catch (Throwable e) {
             Utils.log(null, e);
             e.printStackTrace();
         }
