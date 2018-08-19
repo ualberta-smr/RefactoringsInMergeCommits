@@ -28,7 +28,7 @@ development.url=jdbc:mysql://localhost/refactoring_analysis
 If you wish, you can choose a different name for the database (`refactoring_analysis` in the template). You don't need to create the database, since it will be automatically created by the program if it doesn't exist.
 
 ### List of repositories
-The program requires a text file consisting of the git repositories you want to analyze. Each line in the textfile should  include the URL of a git repository.
+The program requires a text file consisting of the git repositories you want to analyze. Each line in the text file should   include the complete URL of a git repository. (Example: [reposList.txt](reposList.txt))
 
 ### Run the JAR file
 You can run the file with the following command:
