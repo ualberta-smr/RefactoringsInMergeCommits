@@ -64,7 +64,7 @@ public class GitUtils {
         return mergeCommits;
     }
 
-    public boolean isConflicting(RevCommit mergeCommit, Map<String, String> javaConflicts) throws Exception {
+    public boolean isConflicting(RevCommit mergeCommit, Map<String, String> javaConflicts) throws GitAPIException {
         Utils.runSystemCommand(git.getRepository().getWorkTree().getAbsolutePath(),
                 "git", "reset", "--hard");
         Utils.runSystemCommand(git.getRepository().getWorkTree().getAbsolutePath(),
@@ -83,9 +83,9 @@ public class GitUtils {
     }
 
     public boolean isConflictingFromMergeOutput(String mergeOutput, Map<String, String> javaConflicts) throws
-            Exception {
+            GitAPIException {
         if (mergeOutput.toLowerCase().startsWith("fatal:")) {
-            throw new Exception("There was a problem while checking for merge conflict:\n" + mergeOutput);
+            throw new UnsupportedGitConflict("There was a problem while checking for merge conflict:\n" + mergeOutput);
         }
         for (String line : mergeOutput.split("\n")) {
             if (!line.startsWith("CONFLICT")) continue;
@@ -108,7 +108,7 @@ public class GitUtils {
                 conflictType = "Undetected";
                 filePath = line;
             } else {
-                Utils.log(null, "Unknown git conflict: " + line);
+                Utils.log(git.getRepository().getWorkTree().getName(), "Unknown git conflict: " + line);
                 continue;
             }
 
@@ -214,6 +214,13 @@ public class GitUtils {
                     Objects.equals(commitHash, that.commitHash) &&
                     Objects.equals(oldPath, that.oldPath) &&
                     Objects.equals(newPath, that.newPath);
+        }
+    }
+
+    public static class UnsupportedGitConflict extends GitAPIException {
+
+        protected UnsupportedGitConflict(String message) {
+            super(message);
         }
     }
 

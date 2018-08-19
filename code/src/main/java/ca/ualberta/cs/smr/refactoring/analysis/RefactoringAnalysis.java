@@ -6,6 +6,8 @@ import ca.ualberta.cs.smr.refactoring.analysis.utils.RefactoringMinerUtils;
 import ca.ualberta.cs.smr.refactoring.analysis.utils.Utils;
 import gr.uom.java.xmi.diff.CodeRange;
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.api.errors.JGitInternalException;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.javalite.activejdbc.Base;
 import org.refactoringminer.api.Refactoring;
@@ -25,16 +27,17 @@ public class RefactoringAnalysis {
     private String repoListFile = "../reposList.txt";
 
     public static void main(String[] args) {
-            RefactoringAnalysis refAnalysis;
-            if (args.length == 1) {
-                refAnalysis = new RefactoringAnalysis(args[0]);
-            } else if (args.length == 2) {
-                refAnalysis = new RefactoringAnalysis(args[0], args[1]);
-            } else {
-                refAnalysis = new RefactoringAnalysis();
-            }
+        RefactoringAnalysis refAnalysis;
+        if (args.length == 1) {
+            refAnalysis = new RefactoringAnalysis(args[0]);
+        } else if (args.length == 2) {
+            refAnalysis = new RefactoringAnalysis(args[0], args[1]);
+        } else {
+            refAnalysis = new RefactoringAnalysis();
+        }
 
         try {
+            DatabaseUtils.createDatabase();
             refAnalysis.runParallel();
         } catch (Exception e) {
             Utils.log(null, e);
@@ -42,7 +45,8 @@ public class RefactoringAnalysis {
         }
     }
 
-    public RefactoringAnalysis() {}
+    public RefactoringAnalysis() {
+    }
 
     public RefactoringAnalysis(String repoListFile) {
         this.repoListFile = repoListFile;
@@ -87,7 +91,7 @@ public class RefactoringAnalysis {
         String projectName = projectURL.substring(projectURL.lastIndexOf('/') + 1);
         try {
             cloneProject(projectURL);
-        } catch (Exception e) {
+        } catch (JGitInternalException | GitAPIException e) {
             Utils.log(projectName, e);
             e.printStackTrace();
         }
@@ -98,18 +102,17 @@ public class RefactoringAnalysis {
                 project = new Project(projectURL, projectName);
                 project.saveIt();
             }
-
             analyzeProject(project);
             Utils.log(projectName, "Finished the analysis, removing the repository...");
             removeProject(projectName);
             Utils.log(projectName, "Done with " + projectName);
-        } catch (Exception e) {
+        } catch (JGitInternalException | GitAPIException | IOException e) {
             Utils.log(projectName, e);
             e.printStackTrace();
         }
     }
 
-    private void cloneProject(String url) throws Exception {
+    private void cloneProject(String url) throws GitAPIException {
         String projectName = url.substring(url.lastIndexOf('/') + 1);
         Utils.log(projectName, String.format("Cloning %s...", projectName));
         Git.cloneRepository()
@@ -129,7 +132,7 @@ public class RefactoringAnalysis {
         }
     }
 
-    private void analyzeProject(Project project) throws Exception {
+    private void analyzeProject(Project project) throws GitAPIException, IOException {
         Utils.log(project.getName(), String.format("Analyzing %s's commits...", project.getName()));
         analyzeProjectCommits(project);
 
@@ -137,7 +140,7 @@ public class RefactoringAnalysis {
         analyzeProjectWithRefMiner(project);
     }
 
-    private void analyzeProjectCommits(Project project) throws Exception {
+    private void analyzeProjectCommits(Project project) throws GitAPIException, IOException {
         GitUtils gitUtils = new GitUtils(new File(projectsDirectory, project.getName()));
         List<RevCommit> mergeCommits = gitUtils.getMergeCommits();
         for (int i = 0; i < mergeCommits.size(); i++) {
@@ -160,7 +163,7 @@ public class RefactoringAnalysis {
                 mergeCommitModel.saveIt();
 
                 extractConflictingRegions(gitUtils, mergeCommitModel, conflictingJavaFiles);
-            } catch (Exception e) {
+            } catch (GitAPIException e) {
                 Utils.log(project.getName(), e);
                 e.printStackTrace();
             }
@@ -247,7 +250,7 @@ public class RefactoringAnalysis {
                 }
 
             }
-        } catch (Exception e) {
+        } catch (GitAPIException | IOException e) {
             Utils.log(project.getName(), e);
             e.printStackTrace();
         }
