@@ -12,7 +12,7 @@ This project analyzes merge commits in git repositries and determines whether re
 ## How to run
 
 ### 1. Compile the project
-Clone the repository and navigate to `code`. Run this command to compile the project and create an executable JAR file:
+Clone the repository and run the following command to compile the project and create an executable JAR file:
 ```
 TODO: MAVEN_COMMAND
 ```
@@ -21,8 +21,8 @@ TODO: MAVEN_COMMAND
 Create a `database.properties` file similar to the template below, with your MySQL username and password:
 ```
 development.driver=com.mysql.jdbc.Driver
-development.username=%username%
-development.password=%password%
+development.username=USERNAME
+development.password=PASSWORD
 development.url=jdbc:mysql://localhost/refactoring_analysis
 ```
 If you wish, you can choose a different name for the database (`refactoring_analysis` in the template). You don't need to create the database, since it will be automatically created by the program if it doesn't exist.
@@ -33,18 +33,19 @@ The program requires a text file consisting of the git repositories you want to 
 ### 4. Run the JAR file
 You can run the JAR file with the following command:
  ```
- java -jar -Denv.connections.file=/path/to/database.properties refactoring-analysis.jar [OPTIONS]
+ java -jar refactoring-analysis.jar [OPTIONS]
  ```
  Note that none of the options are required. Here is a list of available options:
  ```
  -c,--clonepath <file>        directory to temporarily download repositories (default=projects)
+ -d,--dbproperties <file>     database properties file (default=database.properties)
  -h,--help                    print this message
  -p,--parallelism <threads>   number of threads for parallel computing (default=1)
  -r,--reposfile <file>        list of repositories to be analyzed (default=reposList.txt)
  ```
  Here is an example command with all the options:
  ```
-  java -jar -Denv.connections.file=database.properties refactoring-analysis.jar -r list.txt -c downloadedRepos -p 16 
+  java -jar refactoring-analysis.jar -r list.txt -c downloadedRepos -p 8 
  ```
  
  #### JVM max heap size
@@ -52,5 +53,5 @@ You can run the JAR file with the following command:
  
  For setting the maximum heap size, you can use the `-Xmx` option. For example, if you want to set it to 50 Gigabytes, you can use this command:
 ```
-java -jar -Xmx50g -Denv.connections.file=/path/to/database.properties refactoring-analysis.jar [OPTIONS]
+java -jar -Xmx50g refactoring-analysis.jar [OPTIONS]
 ```
