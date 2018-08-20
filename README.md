@@ -18,7 +18,7 @@ TODO: MAVEN_COMMAND
 ```
 
 ### 2. Create a database configuration file
-Create a `database.properties` file similar to the template below, with your MySQL username and password:
+Edit the `database.properties` file similar and add your MySQL username and password:
 ```
 development.driver=com.mysql.jdbc.Driver
 development.username=USERNAME
@@ -45,7 +45,7 @@ You can run the JAR file with the following command:
  ```
  Here is an example command with all the options:
  ```
-  java -jar refactoring-analysis.jar -r list.txt -c downloadedRepos -p 8 
+  java -jar refactoring-analysis.jar -r list.txt -c downloadedRepos -d mydb.properties -p 8 
  ```
  
  #### JVM max heap size
