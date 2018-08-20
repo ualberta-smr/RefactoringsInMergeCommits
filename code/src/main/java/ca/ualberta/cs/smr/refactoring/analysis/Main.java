@@ -47,21 +47,21 @@ public class Main {
         Options options = new Options();
         options.addOption("h", "help", false, "print this message");
         options.addOption(OptionBuilder.withLongOpt("reposfile")
-                .withDescription("list of repositories to be analyzed")
+                .withDescription(String.format("list of repositories to be analyzed (default=%s)", DEFAULT_REPOS_FILE))
                 .hasArgs()
                 .withArgName("file")
                 .isRequired(false)
                 .create("r"));
 
         options.addOption(OptionBuilder.withLongOpt("clonepath")
-                .withDescription("where repositories are downloaded")
+                .withDescription(String.format("directory to temporarily download repositories (default=%s)", DEFAULT_CLONE_PATH))
                 .hasArgs()
                 .withArgName("file")
                 .isRequired(false)
                 .create("c"));
 
         options.addOption(OptionBuilder.withLongOpt("parallelism")
-                .withDescription("number of threads for parallel computing")
+                .withDescription(String.format("number of threads for parallel computing (default=%d)", DEFAULT_PARALLELISM))
                 .hasArgs()
                 .withArgName("threads")
                 .isRequired(false)
@@ -71,6 +71,6 @@ public class Main {
 
     private static void printHelp() {
         HelpFormatter formatter = new HelpFormatter();
-        formatter.printHelp( "java -jar refactoring-analysis.jar [OPTIONS]", createOptions());
+        formatter.printHelp( "java -jar -Denv.connections.file=/path/to/database.properties refactoring-analysis.jar [OPTIONS]", createOptions());
     }
 }
