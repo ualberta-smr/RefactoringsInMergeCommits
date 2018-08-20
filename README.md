@@ -18,7 +18,7 @@ TODO: MAVEN_COMMAND
 ```
 
 ### 2. Create a database configuration file
-Edit the `database.properties` file similar and add your MySQL username and password:
+Edit the `database.properties` file and add your MySQL username and password:
 ```
 development.driver=com.mysql.jdbc.Driver
 development.username=USERNAME
