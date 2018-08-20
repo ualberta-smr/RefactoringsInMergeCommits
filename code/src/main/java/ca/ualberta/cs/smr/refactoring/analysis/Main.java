@@ -3,6 +3,8 @@ package ca.ualberta.cs.smr.refactoring.analysis;
 import org.apache.commons.cli.*;
 import org.javalite.activejdbc.DB;
 
+import java.io.File;
+
 public class Main {
 
     private static final int DEFAULT_PARALLELISM = 1;
@@ -40,6 +42,7 @@ public class Main {
                 parallelism = Integer.valueOf(commandLine.getOptionValue("p"));
             }
 
+            dbPropertiesFile = (new File(dbPropertiesFile)).getAbsolutePath();
             System.setProperty("env.connections.file", dbPropertiesFile);
             RefactoringAnalysis refactoringAnalysis = new RefactoringAnalysis(reposFile, clonePath);
             refactoringAnalysis.start(parallelism);
