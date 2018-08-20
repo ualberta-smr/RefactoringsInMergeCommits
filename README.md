@@ -6,7 +6,6 @@ This project analyzes merge commits in git repositries and determines whether re
 * Linux or macOS
 * git
 * Java 8
-* Maven
 * MySQL 5.7
 
 ## How to run
@@ -14,7 +13,7 @@ This project analyzes merge commits in git repositries and determines whether re
 ### 1. Compile the project
 Clone the repository and run the following command to compile the project and create an executable JAR file:
 ```
-mvn -f code clean compile assembly:single
+./mvnw -f code clean compile assembly:single
 ```
 
 ### 2. Create a database configuration file
