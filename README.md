@@ -35,7 +35,7 @@ You can run the JAR file with the following command:
  ```
  java -jar -Denv.connections.file=/path/to/database.properties refactoring-analysis.jar [OPTIONS]
  ```
- Note that none of the options are required. Here is a list of the available options:
+ Note that none of the options are required. Here is a list of available options:
  ```
  -c,--clonepath <file>        directory to temporarily download repositories (default=projects)
  -h,--help                    print this message
