@@ -44,16 +44,12 @@ public class GitUtils {
         return new GitUtils();
     }
 
-    public Iterable<RevCommit> getMergeCommits(int[] length) {
+    public Iterable<RevCommit> getMergeCommits() {
         try {
              return git.log().all().setRevFilter(new RevFilter() {
                  @Override
                  public boolean include(RevWalk revWalk, RevCommit revCommit) throws StopWalkException {
-                     if (revCommit.getParentCount() == 2) {
-                         length[0]++;
-                         return true;
-                     }
-                     return false;
+                     return revCommit.getParentCount() == 2;
                  }
 
                  @Override
