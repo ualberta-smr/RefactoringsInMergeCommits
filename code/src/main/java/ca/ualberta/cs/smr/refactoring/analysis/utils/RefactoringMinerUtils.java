@@ -8,6 +8,7 @@ import org.eclipse.jgit.api.ResetCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.refactoringminer.api.GitHistoryRefactoringMiner;
+import org.refactoringminer.api.Refactoring;
 import org.refactoringminer.api.RefactoringHandler;
 import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 
@@ -35,19 +36,16 @@ public class RefactoringMinerUtils {
         return new RefactoringMinerUtils();
     }
 
-    public List<org.refactoringminer.api.Refactoring> detectAtCommit(String commitHash) throws GitAPIException {
+    public void detectAtCommit(String commitHash, List<Refactoring> refactoringsResult) throws GitAPIException {
         git.reset().setMode(ResetCommand.ResetType.HARD).call();
 
-        List<org.refactoringminer.api.Refactoring> allRefactorings = new ArrayList<>();
         GitHistoryRefactoringMiner miner = new GitHistoryRefactoringMinerImpl();
         miner.detectAtCommit(git.getRepository(), url, commitHash, new RefactoringHandler() {
             @Override
             public void handle(RevCommit commitData, List<org.refactoringminer.api.Refactoring> refactorings) {
-                allRefactorings.addAll(refactorings);
+                refactorings.forEach(refactoring -> refactoringsResult.add(refactoring));
             }
         });
-
-        return allRefactorings;
     }
 
     public void getRefactoringCodeRanges(org.refactoringminer.api.Refactoring refactoring,

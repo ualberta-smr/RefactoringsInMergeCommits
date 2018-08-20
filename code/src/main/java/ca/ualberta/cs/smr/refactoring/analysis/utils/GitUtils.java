@@ -44,24 +44,27 @@ public class GitUtils {
         return new GitUtils();
     }
 
-    public List<RevCommit> getMergeCommits() {
-        List<RevCommit> mergeCommits = new ArrayList<>();
+    public Iterable<RevCommit> getMergeCommits(int[] length) {
         try {
-             git.log().all().setRevFilter(new RevFilter() {
+             return git.log().all().setRevFilter(new RevFilter() {
                  @Override
-                 public boolean include(RevWalk revWalk, RevCommit revCommit) throws StopWalkException, MissingObjectException, IncorrectObjectTypeException, IOException {
-                     return revCommit.getParentCount() == 2;
+                 public boolean include(RevWalk revWalk, RevCommit revCommit) throws StopWalkException {
+                     if (revCommit.getParentCount() == 2) {
+                         length[0]++;
+                         return true;
+                     }
+                     return false;
                  }
 
                  @Override
                  public RevFilter clone() {
                      return this;
                  }
-             }).call().forEach(mergeCommits::add);
+             }).call();
         } catch (IOException | GitAPIException e) {
             e.printStackTrace();
         }
-        return mergeCommits;
+        return null;
     }
 
     public boolean isConflicting(RevCommit mergeCommit, Map<String, String> javaConflicts) throws GitAPIException {
@@ -145,17 +148,17 @@ public class GitUtils {
         }
     }
 
-    public List<CodeRegionChange> getConflictingRegionHistory(String commitReachableFrom, String commitNotReachableFrom,
-                                                              String path, int[] conflictingRegion) {
+    public void getConflictingRegionHistory(String commitReachableFrom, String commitNotReachableFrom,
+                                            String path, int[] conflictingRegion,
+                                            List<CodeRegionChange> conflictingRegionHistory) {
         String fileRange = conflictingRegion[0] + "," + (conflictingRegion[0] + conflictingRegion[1]) + ":" + path;
         String commitRange = commitNotReachableFrom + ".." + commitReachableFrom;
         String logOutput = Utils.runSystemCommand(git.getRepository().getWorkTree().getAbsolutePath(),
                 "git", "log", "--topo-order", "-u", "-L", fileRange, commitRange);
-        return getConflictingRegionHistoryFromGitOutput(logOutput);
+        getConflictingRegionHistoryFromGitOutput(logOutput, conflictingRegionHistory);
     }
 
-    public List<CodeRegionChange> getConflictingRegionHistoryFromGitOutput(String logOutput) {
-        List<CodeRegionChange> codeRegionChanges = new ArrayList<>();
+    public void getConflictingRegionHistoryFromGitOutput(String logOutput, List<CodeRegionChange> conflictingRegionHistory) {
         String currentCommit = null;
         String[] currentPaths = new String[2];
         for (String line : logOutput.split("\n")) {
@@ -174,7 +177,7 @@ public class GitUtils {
 
                 }
             } else if (diffMatcher.matches()) {
-                codeRegionChanges.add(new CodeRegionChange(
+                conflictingRegionHistory.add(new CodeRegionChange(
                         currentCommit, currentPaths[0], currentPaths[1],
                         Integer.valueOf(diffMatcher.group(1)),
                         Integer.valueOf(diffMatcher.group(2)),
@@ -183,8 +186,6 @@ public class GitUtils {
                 currentPaths = new String[2];
             }
         }
-
-        return codeRegionChanges;
     }
 
     public static class CodeRegionChange {

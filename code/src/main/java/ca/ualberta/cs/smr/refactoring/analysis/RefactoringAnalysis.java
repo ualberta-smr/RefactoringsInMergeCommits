@@ -64,7 +64,7 @@ public class RefactoringAnalysis {
         int parallelism = Math.max(1, (int) (Runtime.getRuntime().availableProcessors() * .75));
         ForkJoinPool forkJoinPool = null;
         try {
-            forkJoinPool = new ForkJoinPool(parallelism);
+            forkJoinPool = new ForkJoinPool();
             forkJoinPool.submit(() ->
                     projectURLs.parallelStream().forEach(s -> {
                         Base.open();
@@ -142,11 +142,14 @@ public class RefactoringAnalysis {
 
     private void analyzeProjectCommits(Project project) throws GitAPIException, IOException {
         GitUtils gitUtils = new GitUtils(new File(projectsDirectory, project.getName()));
-        List<RevCommit> mergeCommits = gitUtils.getMergeCommits();
-        for (int i = 0; i < mergeCommits.size(); i++) {
-            RevCommit mergeCommit = mergeCommits.get(i);
+        int[] mergeCommitsLength = new int[1];
+        Iterable<RevCommit> mergeCommits = gitUtils.getMergeCommits(mergeCommitsLength);
+        int mergeCommitIndex = 0;
+        Map<String, String> conflictingJavaFiles = new HashMap<>();
+        for (RevCommit mergeCommit : mergeCommits) {
+            mergeCommitIndex++;
             Utils.log(project.getName(), String.format("Analyzing commit %.7s... (%d/%d)", mergeCommit.getName(),
-                    i + 1, mergeCommits.size()));
+                    mergeCommitIndex, mergeCommitsLength[0]));
 
             // Skip this commit if it already exists in the database.
             if (MergeCommit.where("commit_hash = ?", mergeCommit.getName()).size() > 0) {
@@ -155,7 +158,7 @@ public class RefactoringAnalysis {
             }
 
             try {
-                Map<String, String> conflictingJavaFiles = new HashMap<>();
+                conflictingJavaFiles.clear();
                 boolean isConflicting = gitUtils.isConflicting(mergeCommit, conflictingJavaFiles);
 
                 MergeCommit mergeCommitModel = new MergeCommit(mergeCommit.getName(), isConflicting,
@@ -167,11 +170,16 @@ public class RefactoringAnalysis {
                 Utils.log(project.getName(), e);
                 e.printStackTrace();
             }
+            conflictingJavaFiles.clear();
         }
     }
 
     private void extractConflictingRegions(GitUtils gitUtils, MergeCommit mergeCommit,
                                            Map<String, String> conflictingJavaFiles) {
+        List<int[][]> conflictingRegions = new ArrayList<>();
+        List<GitUtils.CodeRegionChange> leftConflictingRegionHistory = new ArrayList<>();
+        List<GitUtils.CodeRegionChange> rightConflictingRegionHistory = new ArrayList<>();
+
         for (String path : conflictingJavaFiles.keySet()) {
             String conflictType = conflictingJavaFiles.get(path);
             ConflictingJavaFile conflictingJavaFile = new ConflictingJavaFile(path, conflictType, mergeCommit);
@@ -180,7 +188,7 @@ public class RefactoringAnalysis {
             if (conflictType.equalsIgnoreCase("content") ||
                     conflictType.equalsIgnoreCase("add/add")) {
                 String[] conflictingRegionPaths = new String[2];
-                List<int[][]> conflictingRegions = new ArrayList<>();
+                conflictingRegions.clear();
                 gitUtils.getConflictingRegions(path, conflictingRegionPaths, conflictingRegions);
 
                 for (int[][] conflictingLines : conflictingRegions) {
@@ -190,12 +198,12 @@ public class RefactoringAnalysis {
                             conflictingJavaFile);
                     conflictingRegion.saveIt();
 
-                    List<GitUtils.CodeRegionChange> leftConflictingRegionHistory = gitUtils.getConflictingRegionHistory(
-                            mergeCommit.getParent1(), mergeCommit.getParent2(),
-                            path, conflictingLines[0]);
-                    List<GitUtils.CodeRegionChange> rightConflictingRegionHistory = gitUtils.getConflictingRegionHistory(
-                            mergeCommit.getParent2(), mergeCommit.getParent1(),
-                            path, conflictingLines[1]);
+                    leftConflictingRegionHistory.clear();
+                    rightConflictingRegionHistory.clear();
+                    gitUtils.getConflictingRegionHistory(mergeCommit.getParent1(), mergeCommit.getParent2(),
+                            path, conflictingLines[0], leftConflictingRegionHistory);
+                    gitUtils.getConflictingRegionHistory(mergeCommit.getParent2(), mergeCommit.getParent1(),
+                            path, conflictingLines[1], rightConflictingRegionHistory);
 
                     leftConflictingRegionHistory.forEach(codeRegionChange -> new ConflictingRegionHistory(
                             codeRegionChange.commitHash, 1,
@@ -207,9 +215,13 @@ public class RefactoringAnalysis {
                             codeRegionChange.oldStartLine, codeRegionChange.oldLength, codeRegionChange.oldPath,
                             codeRegionChange.newStartLine, codeRegionChange.newLength, codeRegionChange.newPath,
                             conflictingRegion).saveIt());
+
                 }
             }
         }
+        conflictingRegions.clear();
+        leftConflictingRegionHistory.clear();
+        rightConflictingRegionHistory.clear();
     }
 
 
@@ -217,6 +229,9 @@ public class RefactoringAnalysis {
         List<ConflictingRegionHistory> historyConfRegions =
                 ConflictingRegionHistory.where("project_id = ?", project.getId());
 
+        List<Refactoring> refactorings = new ArrayList<>();
+        List<CodeRange> sourceCodeRanges = new ArrayList<>();
+        List<CodeRange> destCodeRanges = new ArrayList<>();
         try {
             RefactoringMinerUtils refMinerUtils = new RefactoringMinerUtils(new File(projectsDirectory, project.getName()),
                     project.getURL());
@@ -228,7 +243,8 @@ public class RefactoringAnalysis {
 
                 Utils.log(project.getName(), String.format("Analyzing commit %.7s with RefMiner... (%d/%d)",
                         conflictingRegionHistory.getCommitHash(), i + 1, historyConfRegions.size()));
-                List<Refactoring> refactorings = refMinerUtils.detectAtCommit(conflictingRegionHistory.getCommitHash());
+                refactorings.clear();
+                refMinerUtils.detectAtCommit(conflictingRegionHistory.getCommitHash(), refactorings);
                 for (Refactoring refactoring : refactorings) {
                     ca.ualberta.cs.smr.refactoring.analysis.database.Refactoring refactoringModel =
                             new ca.ualberta.cs.smr.refactoring.analysis.database.Refactoring(
@@ -240,19 +256,23 @@ public class RefactoringAnalysis {
                                     conflictingRegionHistory.getProjectId());
                     refactoringModel.saveIt();
 
-                    List<CodeRange> sourceCodeRanges = new ArrayList<>();
-                    List<CodeRange> destCodeRanges = new ArrayList<>();
+                    sourceCodeRanges.clear();
+                    destCodeRanges.clear();
                     refMinerUtils.getRefactoringCodeRanges(refactoring, sourceCodeRanges, destCodeRanges);
                     sourceCodeRanges.forEach(cr -> new RefactoringRegion('s', cr.getFilePath(), cr.getStartLine(),
                             cr.getEndLine() - cr.getStartLine(), refactoringModel).saveIt());
                     destCodeRanges.forEach(cr -> new RefactoringRegion('d', cr.getFilePath(), cr.getStartLine(),
                             cr.getEndLine() - cr.getStartLine(), refactoringModel).saveIt());
                 }
-
+                refactorings.clear();
             }
+            historyConfRegions.clear();
         } catch (GitAPIException | IOException e) {
             Utils.log(project.getName(), e);
             e.printStackTrace();
         }
+        refactorings.clear();
+        sourceCodeRanges.clear();
+        destCodeRanges.clear();
     }
 }

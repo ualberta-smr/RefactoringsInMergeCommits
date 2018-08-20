@@ -159,7 +159,8 @@ class GitUtilsTest {
                         "api/src/main/java/org/apache/cxf/databinding/AbstractDataBinding.java",
                         0,0, 18,45)
         );
-
-        assertEquals(expectedCodeRegionChanges, GIT_UTILS_TEST.getConflictingRegionHistoryFromGitOutput(logOutput));
+        List<GitUtils.CodeRegionChange> actualCodeRegionChanges = new ArrayList<>();
+        GIT_UTILS_TEST.getConflictingRegionHistoryFromGitOutput(logOutput, actualCodeRegionChanges);
+        assertEquals(expectedCodeRegionChanges, actualCodeRegionChanges);
     }
 }
