@@ -1,4 +1,7 @@
-*/.idea/
+.idea/
+target/
+*.iml
+logs/
 .DS_Store
 projects/
 dataset/dataset.csv
