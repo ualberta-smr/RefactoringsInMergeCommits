@@ -4,6 +4,9 @@ import org.javalite.activejdbc.*;
 import org.javalite.activejdbc.connection_config.ConnectionJdbcSpec;
 import org.javalite.activejdbc.connection_config.ConnectionSpec;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -39,18 +42,19 @@ public class DatabaseUtils {
                     jdbcSpec.getUser(), jdbcSpec.getPassword());
 
             DatabaseUtils.executeFile(
-                    Thread.currentThread().getContextClassLoader().getResource(CREATE_SCHEMA_FILE).getPath(), db);
+                    Thread.currentThread().getContextClassLoader().getResourceAsStream(CREATE_SCHEMA_FILE), db);
             db.close();
         }
     }
 
 
-    private static void executeFile(String filePath, DB db) throws Exception {
-        List<String> lines = Files.readAllLines(Paths.get(filePath), Charset.defaultCharset());
+    private static void executeFile(InputStream inputStream, DB db) throws Exception {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
         String delimiter = DEFAULT_DELIMITER;
         List<String> statements = new ArrayList<>();
         String currentStatement = "";
-        for (String line : lines) {
+        String line;
+        while ((line = reader.readLine()) != null) {
             line = line.trim();
             if (!commentLine(line) && !blank(line)) {
                 if (line.startsWith(DELIMITER_KEYWORD)) {
@@ -65,6 +69,12 @@ public class DatabaseUtils {
                     currentStatement += line + System.getProperty("line.separator");
                 }
             }
+        }
+        try {
+            reader.close();
+            inputStream.close();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
         if (!blank(currentStatement)) {

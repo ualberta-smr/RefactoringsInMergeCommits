@@ -42,8 +42,8 @@ public class RefactoringMinerUtils {
         GitHistoryRefactoringMiner miner = new GitHistoryRefactoringMinerImpl();
         miner.detectAtCommit(git.getRepository(), url, commitHash, new RefactoringHandler() {
             @Override
-            public void handle(RevCommit commitData, List<org.refactoringminer.api.Refactoring> refactorings) {
-                refactorings.forEach(refactoring -> refactoringsResult.add(refactoring));
+            public void handle(RevCommit commitData, List<Refactoring> refactorings) {
+                refactoringsResult.addAll(refactorings);
             }
         });
     }
