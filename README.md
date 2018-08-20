@@ -42,3 +42,7 @@ You can run the JAR file with the following command:
  -p,--parallelism <threads>   number of threads for parallel computing (default 1)
  -r,--reposfile <file>        list of repositories to be analyzed (default reposList.txt)
  ```
+ An example command with all options would look like this:
+ ```
+  java -jar -Denv.connections.file=database.properties refactoring-analysis.jar -r list.txt -c downloadedRepos -p 32 
+ ```
