@@ -1,0 +1,1 @@
+install: ./mvnw -f code clean compile assembly:single
