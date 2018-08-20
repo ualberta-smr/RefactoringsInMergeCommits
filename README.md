@@ -1,4 +1,4 @@
-# Refactoring Analysis
+# Refactoring Analysis [![Build Status](https://travis-ci.com/ualberta-smr/code-mahmoudi-refactoring-analysis.svg?token=24uYxacbz7nEGNcMhkpg&branch=master)](https://travis-ci.com/ualberta-smr/code-mahmoudi-refactoring-analysis)
 This project analyzes merge commits in git repositries and determines whether refactoring changes are to blame for the conflicts.
 
 
