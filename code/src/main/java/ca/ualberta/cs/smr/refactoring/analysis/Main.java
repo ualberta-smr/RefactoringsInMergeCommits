@@ -1,7 +1,6 @@
 package ca.ualberta.cs.smr.refactoring.analysis;
 
 import org.apache.commons.cli.*;
-import org.javalite.activejdbc.DB;
 
 import java.io.File;
 
@@ -44,9 +43,9 @@ public class Main {
 
             dbPropertiesFile = (new File(dbPropertiesFile)).getAbsolutePath();
             System.setProperty("env.connections.file", dbPropertiesFile);
+
             RefactoringAnalysis refactoringAnalysis = new RefactoringAnalysis(reposFile, clonePath);
             refactoringAnalysis.start(parallelism);
-
         } catch (Exception e) {
             e.printStackTrace();
             printHelp();
