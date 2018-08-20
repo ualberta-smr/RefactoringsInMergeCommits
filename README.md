@@ -33,5 +33,12 @@ The program requires a text file consisting of the git repositories you want to 
 ### 4. Run the JAR file
 You can run the JAR file with the following command:
  ```
- java -jar refactoring-analysis.jar "/path/to/reposList.txt" -Denv.connections.file=/path/to/file/database.properties
+ java -jar -Denv.connections.file=/path/to/database.properties refactoring-analysis.jar [OPTIONS]
+ ```
+ None of the options are required. Here is the list of available options:
+ ```
+ -c,--clonepath <file>        where repositories are downloaded (default projects)
+ -h,--help                    print this message
+ -p,--parallelism <threads>   number of threads for parallel computing (default 1)
+ -r,--reposfile <file>        list of repositories to be analyzed (default reposList.txt)
  ```
