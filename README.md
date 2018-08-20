@@ -35,13 +35,18 @@ You can run the JAR file with the following command:
  ```
  java -jar -Denv.connections.file=/path/to/database.properties refactoring-analysis.jar [OPTIONS]
  ```
- None of the options are required. Here is the list of available options:
+ Note that none of the options are required. Here is a list of the available options:
  ```
  -c,--clonepath <file>        directory to temporarily download repositories (default=projects)
  -h,--help                    print this message
  -p,--parallelism <threads>   number of threads for parallel computing (default=1)
  -r,--reposfile <file>        list of repositories to be analyzed (default=reposList.txt)
  ```
+ Here is an example command with all the options:
+ ```
+  java -jar -Denv.connections.file=database.properties refactoring-analysis.jar -r list.txt -c downloadedRepos -p 32 
+ ```
+ 
  #### JVM max heap size
  Depending on the size of the repositories you are analyzing, you might need to tune the maximum size of your JVM's heap. This becomes specifically important if you are using using the `--parallelism` option to analyze multiple repositories at the same time.
  
@@ -49,8 +54,3 @@ You can run the JAR file with the following command:
 ```
 java -jar -Xmx50g -Denv.connections.file=/path/to/database.properties refactoring-analysis.jar [OPTIONS]
 ```
- #### Example
- Here is an example command with all the options:
- ```
-  java -jar -Xmx64g -Denv.connections.file=database.properties refactoring-analysis.jar -r list.txt -c downloadedRepos -p 32 
- ```
