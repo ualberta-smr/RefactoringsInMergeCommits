@@ -44,11 +44,11 @@ You can run the JAR file with the following command:
  ```
  Here is an example command with all the options:
  ```
-  java -jar -Denv.connections.file=database.properties refactoring-analysis.jar -r list.txt -c downloadedRepos -p 32 
+  java -jar -Denv.connections.file=database.properties refactoring-analysis.jar -r list.txt -c downloadedRepos -p 16 
  ```
  
  #### JVM max heap size
- Depending on the size of the repositories you are analyzing, you might need to tune the maximum size of your JVM's heap. This becomes specifically important if you are using using the `--parallelism` option to analyze multiple repositories at the same time.
+ Depending on the size of the repositories you are analyzing, you might need to tune the maximum size of your JVM's heap memory. This becomes specifically important if you are using using the `--parallelism` option to analyze multiple repositories at the same time.
  
  For setting the maximum heap size, you can use the `-Xmx` option. For example, if you want to set it to 50 Gigabytes, you can use this command:
 ```
