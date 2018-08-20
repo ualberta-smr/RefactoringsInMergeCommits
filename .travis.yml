@@ -1,1 +1,3 @@
-install: ./mvnw -f code clean compile assembly:single
+language: java
+install: true
+script: ./mvnw -f code clean compile assembly:single
