@@ -1,12 +1,14 @@
 package ca.ualberta.cs.smr.refactoring.analysis;
 
 import org.apache.commons.cli.*;
+import org.javalite.activejdbc.DB;
 
 public class Main {
 
-    public static final int DEFAULT_PARALLELISM = 1;
-    public static final String DEFAULT_REPOS_FILE = "reposList.txt";
-    public static final String DEFAULT_CLONE_PATH = "projects";
+    private static final int DEFAULT_PARALLELISM = 1;
+    private static final String DEFAULT_REPOS_FILE = "reposList.txt";
+    private static final String DEFAULT_CLONE_PATH = "projects";
+    private static final String DEFAULT_DB_PROPERTIES_FILE = "database.properties";
 
 
     public static void main(String[] args) {
@@ -23,6 +25,7 @@ public class Main {
             int parallelism = DEFAULT_PARALLELISM;
             String reposFile = DEFAULT_REPOS_FILE;
             String clonePath = DEFAULT_CLONE_PATH;
+            String dbPropertiesFile = DEFAULT_DB_PROPERTIES_FILE;
 
             if (commandLine.hasOption("r")) {
                 reposFile = commandLine.getOptionValue("r");
@@ -30,10 +33,14 @@ public class Main {
             if (commandLine.hasOption("c")) {
                 clonePath = commandLine.getOptionValue("c");
             }
+            if (commandLine.hasOption("d")) {
+                dbPropertiesFile = commandLine.getOptionValue("d");
+            }
             if (commandLine.hasOption("p")) {
                 parallelism = Integer.valueOf(commandLine.getOptionValue("p"));
             }
 
+            System.setProperty("env.connections.file", dbPropertiesFile);
             RefactoringAnalysis refactoringAnalysis = new RefactoringAnalysis(reposFile, clonePath);
             refactoringAnalysis.start(parallelism);
 
@@ -60,6 +67,13 @@ public class Main {
                 .isRequired(false)
                 .create("c"));
 
+        options.addOption(OptionBuilder.withLongOpt("dbproperties")
+                .withDescription(String.format("database properties file (default=%s)", DEFAULT_DB_PROPERTIES_FILE))
+                .hasArgs()
+                .withArgName("file")
+                .isRequired(false)
+                .create("d"));
+
         options.addOption(OptionBuilder.withLongOpt("parallelism")
                 .withDescription(String.format("number of threads for parallel computing (default=%d)", DEFAULT_PARALLELISM))
                 .hasArgs()
@@ -71,6 +85,6 @@ public class Main {
 
     private static void printHelp() {
         HelpFormatter formatter = new HelpFormatter();
-        formatter.printHelp( "java -jar -Denv.connections.file=/path/to/database.properties refactoring-analysis.jar [OPTIONS]", createOptions());
+        formatter.printHelp( "java -jar refactoring-analysis.jar [OPTIONS]", createOptions());
     }
 }
