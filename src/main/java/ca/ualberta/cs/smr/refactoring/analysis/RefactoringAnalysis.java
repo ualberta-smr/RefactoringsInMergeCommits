@@ -218,9 +218,21 @@ public class RefactoringAnalysis {
                     project.getURL());
             for (int i = 0; i < historyConfRegions.size(); i++) {
                 ConflictingRegionHistory conflictingRegionHistory = historyConfRegions.get(i);
-                if (ca.ualberta.cs.smr.refactoring.analysis.database.Refactoring.where("commit_hash = ?",
-                        conflictingRegionHistory.getCommitHash()).size() > 0)
-                    continue;
+
+                // Check if this commit has already been analyzed with RefMiner
+                RefactoringCommit refactoringCommit = RefactoringCommit.findFirst("commit_hash = ?",
+                        conflictingRegionHistory.getCommitHash());
+                if (refactoringCommit != null) {
+                    if (refactoringCommit.isDone()) {
+                        continue;
+                    } else {
+                        ca.ualberta.cs.smr.refactoring.analysis.database.Refactoring.delete(
+                                "refactoring_commit_id = ?", refactoringCommit.getID());
+                    }
+                } else {
+                    refactoringCommit = new RefactoringCommit(conflictingRegionHistory.getCommitHash(), project.getId());
+                    refactoringCommit.saveIt();
+                }
 
                 Utils.log(project.getName(), String.format("Analyzing commit %.7s with RefMiner... (%d/%d)",
                         conflictingRegionHistory.getCommitHash(), i + 1, historyConfRegions.size()));
@@ -229,12 +241,9 @@ public class RefactoringAnalysis {
                 for (Refactoring refactoring : refactorings) {
                     ca.ualberta.cs.smr.refactoring.analysis.database.Refactoring refactoringModel =
                             new ca.ualberta.cs.smr.refactoring.analysis.database.Refactoring(
-                                    conflictingRegionHistory.getCommitHash(),
-                                    conflictingRegionHistory.getMergeParent(),
                                     refactoring.getRefactoringType().getDisplayName(),
                                     refactoring.toString(),
-                                    conflictingRegionHistory.getMergeCommitId(),
-                                    conflictingRegionHistory.getProjectId());
+                                    refactoringCommit);
                     refactoringModel.saveIt();
 
                     sourceCodeRanges.clear();
@@ -245,6 +254,8 @@ public class RefactoringAnalysis {
                     destCodeRanges.forEach(cr -> new RefactoringRegion('d', cr.getFilePath(), cr.getStartLine(),
                             cr.getEndLine() - cr.getStartLine(), refactoringModel).saveIt());
                 }
+                refactoringCommit.setDone();
+                refactoringCommit.saveIt();
                 refactorings.clear();
             }
             historyConfRegions.clear();

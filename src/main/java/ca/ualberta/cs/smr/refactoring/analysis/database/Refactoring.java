@@ -11,19 +11,23 @@ public class Refactoring extends Model {
     public Refactoring() {
     }
 
-    public Refactoring(String commitHash, int mergeParent, String type, String detail, int mergeCommitId, int projectId) {
-        set("commit_hash", commitHash, "merge_parent", mergeParent, "refactoring_type", type, "refactoring_detail",
+    public Refactoring(String type, String detail, RefactoringCommit refactoringCommit) {
+        set("refactoring_type", type, "refactoring_detail",
                 detail.substring(0, Math.min(detail.length(), MAX_DETAIL_LENGTH)),
-                "merge_commit_id", mergeCommitId, "project_id", projectId);
+                "refactoring_commit_id", refactoringCommit.getID(), "commit_hash", refactoringCommit.getCommitHash(),
+                "project_id", refactoringCommit.getProjectId());
     }
-
-    public int getMergeCommitId() {
-        return getInteger("merge_commit_id");
-    }
-
 
     public int getProjectId() {
         return getInteger("project_id");
+    }
+
+    public String getCommitHash() {
+        return getString("commit_hash");
+    }
+
+    public int getRefactoringCommitId() {
+        return getInteger("refactoring_commit_id");
     }
 
 }
