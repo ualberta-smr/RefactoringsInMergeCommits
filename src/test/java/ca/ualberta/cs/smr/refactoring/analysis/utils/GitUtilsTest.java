@@ -28,6 +28,11 @@ class GitUtilsTest {
                 "Auto-merging astroboy/src/roboguice/astroboy/activity/AstroPrefActivity.java\n" +
                 "CONFLICT (rename/delete): astroboy/src/roboguice/astroboy/AstroboyApplication.java deleted in HEAD and renamed in bee336bae0845a0e49037d44efb0e1f5d90105e9. Version bee336bae0845a0e49037d44efb0e1f5d90105e9 of astroboy/src/roboguice/astroboy/AstroboyApplication.java left in tree.\n" +
                 "CONFLICT (rename/rename): Rename \"core/src/com/google/inject/AnnotatedGuiceHierarchyTraversalFilter.java\"->\"core/src/com/google/inject/AnnotatedHierarchyTraversalFilter.java\" in branch \"HEAD\" rename \"core/src/com/google/inject/AnnotatedGuiceHierarchyTraversalFilter.java\"->\"guice/core/src/com/google/inject/AnnotatedGuiceHierarchyTraversalFilter.java\" in \"9417ae6b9cc80dda19232a530c5c7586b70b5e1e\"\n" +
+                "CONFLICT (content): Merge conflict in TFC API/TFC/API/Constant/TFCBlockID.java\n" +
+                "CONFLICT (rename/add): Rename src/org/numenta/nupic/data/SparseBinaryMatrix.java->src/main/java/org/numenta/nupic/data/SparseBinaryMatrix.java in 03eb1c1b15b058048efd17dc145d85a337f2b258. src/main/java/org/numenta/nupic/data/SparseBinaryMatrix.java added in HEAD\n" +
+                "CONFLICT (rename/rename): Rename plugin_ide.ui/src-lang/melnorme/lang/ide/ui/preferences/ValidatedConfigBlock.java->plugin_ide.ui/src-lang/melnorme/lang/ide/ui/preferences/common/AbstractValidatedBlockExt.java in 614ac2a4c546271a5eb0c42f3bbd868f40cb1431. Rename plugin_ide.ui/src/LANG_PROJECT_ID/ide/ui/launch/LANGUAGE_LaunchShortcut.java->plugin_ide.ui/src-lang/melnorme/lang/ide/ui/preferences/common/AbstractValidatedBlockExt.java in HEAD\n" +
+                "CONFLICT (not covered): Something else happened to a .java file.\n" +
+                "CONFLICT (not covered): Something else happened to this file: A.cpp\n" +
                 "Auto-merging astroboy/pom.xml\n" +
                 "Automatic merge failed; fix conflicts and then commit the result.\n";
         Map<String, String> expectedJavaConflicts = new HashMap<>();
@@ -36,7 +41,11 @@ class GitUtilsTest {
         expectedJavaConflicts.put("roboguice/src/main/java/roboguice/application/RoboApplication.java", "modify/delete");
         expectedJavaConflicts.put("api/src/main/java/org/apache/cxf/databinding/WrapperCapableDatabinding.java", "add/add");
         expectedJavaConflicts.put("astroboy/src/roboguice/astroboy/AstroboyApplication.java", "rename/delete");
-        expectedJavaConflicts.put("core/src/com/google/inject/AnnotatedGuiceHierarchyTraversalFilter.java", "rename/rename");
+        expectedJavaConflicts.put("core/src/com/google/inject/AnnotatedHierarchyTraversalFilter.java", "rename/rename");
+        expectedJavaConflicts.put("TFC API/TFC/API/Constant/TFCBlockID.java", "content");
+        expectedJavaConflicts.put("src/main/java/org/numenta/nupic/data/SparseBinaryMatrix.java", "rename/add");
+        expectedJavaConflicts.put("plugin_ide.ui/src-lang/melnorme/lang/ide/ui/preferences/common/AbstractValidatedBlockExt.java", "rename/rename");
+        expectedJavaConflicts.put("CONFLICT (not covered): Something else happened to a .java file.", "Undetected");
 
         Map<String, String> actualJavaConflicts = new HashMap<>();
         assertTrue(GIT_UTILS_TEST.isConflictingFromMergeOutput(mergeOutput, actualJavaConflicts));

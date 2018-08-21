@@ -2,8 +2,6 @@ package ca.ualberta.cs.smr.refactoring.analysis.utils;
 
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.errors.IncorrectObjectTypeException;
-import org.eclipse.jgit.errors.MissingObjectException;
 import org.eclipse.jgit.errors.StopWalkException;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
@@ -11,7 +9,6 @@ import org.eclipse.jgit.revwalk.filter.RevFilter;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -20,9 +17,10 @@ import java.util.regex.Pattern;
 
 public class GitUtils {
 
-    private static final Pattern PATTERN_CONFLICT_RENAME_RENAME = Pattern.compile("CONFLICT \\((.+)\\): Rename \"(\\S*)\"->\"\\S*\".*");
-    private static final Pattern PATTERN_CONFLICT_DELETE = Pattern.compile("CONFLICT \\((.+)\\):\\s(\\S+).+tree.");
-    private static final Pattern PATTERN_CONFLICT_CONTENT = Pattern.compile("CONFLICT \\((.+)\\): Merge conflict in (\\S+)");
+    private static final Pattern PATTERN_CONFLICT_RENAME_RENAME = Pattern.compile("CONFLICT \\((rename\\/rename)\\): Rename \"?[^\"]+\"?->\"?([^\"]+)\"? in .+ [Rr]ename \"?[^\"]+\"?->\"?[^\"]+\"? in .+");
+    private static final Pattern PATTERN_CONFLICT_RENAME_ADD = Pattern.compile("CONFLICT \\((rename\\/add)\\): Rename \"?[^\"]+\"?->\"?([^\"]+)\"? in \\S+ \"?[^\"]+\"? added in .+");
+    private static final Pattern PATTERN_CONFLICT_DELETE = Pattern.compile("CONFLICT \\(((?:rename|modify)\\/delete)\\): \"?([^\"]+)\"? deleted in \\S+ and (?:renamed|modified) in .+");
+    private static final Pattern PATTERN_CONFLICT_CONTENT = Pattern.compile("CONFLICT \\(((?:content|add\\/add))\\): Merge conflict in \"?([^\"]+)\"?");
     private static final Pattern PATTERN_DIFF_PATH = Pattern.compile("(?:\\-\\-\\-|\\+\\+\\+) (?:a\\/|b\\/)?([\\s\\S]+)");
     private static final Pattern PATTERN_DIFF_RANGE = Pattern.compile("\\@\\@ \\-(\\d+),(\\d+) \\+(\\d+),(\\d+) \\@\\@[\\s\\S]*");
     private static final Pattern PATTERN_COMBINED_DIFF_RANGE = Pattern.compile("\\@\\@\\@ \\-(\\d+),(\\d+) \\-(\\d+),(\\d+) \\+(\\d+),(\\d+) \\@\\@\\@[\\s\\S]*");
@@ -46,17 +44,17 @@ public class GitUtils {
 
     public Iterable<RevCommit> getMergeCommits() {
         try {
-             return git.log().all().setRevFilter(new RevFilter() {
-                 @Override
-                 public boolean include(RevWalk revWalk, RevCommit revCommit) throws StopWalkException {
-                     return revCommit.getParentCount() == 2;
-                 }
+            return git.log().all().setRevFilter(new RevFilter() {
+                @Override
+                public boolean include(RevWalk revWalk, RevCommit revCommit) throws StopWalkException {
+                    return revCommit.getParentCount() == 2;
+                }
 
-                 @Override
-                 public RevFilter clone() {
-                     return this;
-                 }
-             }).call();
+                @Override
+                public RevFilter clone() {
+                    return this;
+                }
+            }).call();
         } catch (IOException | GitAPIException e) {
             e.printStackTrace();
         }
@@ -68,15 +66,8 @@ public class GitUtils {
                 "git", "reset", "--hard");
         Utils.runSystemCommand(git.getRepository().getWorkTree().getAbsolutePath(),
                 "git", "checkout", mergeCommit.getParent(0).getName());
-//        git.checkout().setName(mergeCommit.getParent(0).getName()).call();
-        String[] mergeCommand = new String[mergeCommit.getParentCount() + 1];
-        mergeCommand[0] = "git";
-        mergeCommand[1] = "merge";
-        for (int i = 2; i < mergeCommand.length; i++) {
-            mergeCommand[i] = mergeCommit.getParent(i - 1).getName();
-        }
         String mergeOutput = Utils.runSystemCommand(git.getRepository().getWorkTree().getAbsolutePath(),
-                mergeCommand);
+                "git", "merge", "--no-commit", mergeCommit.getParent(1).getName());
 
         return isConflictingFromMergeOutput(mergeOutput, javaConflicts);
     }
@@ -91,15 +82,19 @@ public class GitUtils {
 
             String filePath, conflictType;
             Matcher renameRenameMatcher = PATTERN_CONFLICT_RENAME_RENAME.matcher(line);
-            Matcher renameDeleteMatcher = PATTERN_CONFLICT_DELETE.matcher(line);
+            Matcher renameAddMatcher = PATTERN_CONFLICT_RENAME_ADD.matcher(line);
+            Matcher deleteMatcher = PATTERN_CONFLICT_DELETE.matcher(line);
             Matcher contentMatcher = PATTERN_CONFLICT_CONTENT.matcher(line);
 
             if (renameRenameMatcher.matches()) {
                 conflictType = renameRenameMatcher.group(1);
                 filePath = renameRenameMatcher.group(2);
-            } else if (renameDeleteMatcher.matches()) {
-                conflictType = renameDeleteMatcher.group(1);
-                filePath = renameDeleteMatcher.group(2);
+            } else if (renameAddMatcher.matches()) {
+                conflictType = renameAddMatcher.group(1);
+                filePath = renameAddMatcher.group(2);
+            } else if (deleteMatcher.matches()) {
+                conflictType = deleteMatcher.group(1);
+                filePath = deleteMatcher.group(2);
             } else if (contentMatcher.matches()) {
                 conflictType = contentMatcher.group(1);
                 filePath = contentMatcher.group(2);
@@ -107,7 +102,8 @@ public class GitUtils {
                 conflictType = "Undetected";
                 filePath = line;
             } else {
-                Utils.log(git.getRepository().getWorkTree().getName(), "Unknown git conflict: " + line);
+                if (git != null)
+                    Utils.log(git.getRepository().getWorkTree().getName(), "Unknown git conflict: " + line);
                 continue;
             }
 
@@ -125,7 +121,7 @@ public class GitUtils {
     }
 
     public void getConflictingRegionsFromDiffOutput(String diffOutput, String[] conflictingRegionPaths,
-                                                     List<int[][]> conflictingRegions) {
+                                                    List<int[][]> conflictingRegions) {
         for (String line : diffOutput.split("\n")) {
             Matcher conflictLocMatcher = PATTERN_COMBINED_DIFF_RANGE.matcher(line);
             Matcher conflictPathMatcher = PATTERN_DIFF_PATH.matcher(line);
