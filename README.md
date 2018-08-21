@@ -48,9 +48,7 @@ You can run the JAR file with the following command:
  ```
  
  #### JVM max heap size
- Depending on the size of the repositories you are analyzing, you might need to tune the maximum size of your JVM's heap memory. This becomes specifically important if you are using the `--parallelism` option to analyze multiple repositories in parallel.
- 
- For setting the maximum heap size, you can use the `-Xmx` option. For example, if you want to set it to 50 Gigabytes, you can use this command:
+ If you are using the `--parallelism` option to analyze multiple repositories in parallel, you might run into a [`OutOfMemoryError`](https://docs.oracle.com/javase/8/docs/api/java/lang/OutOfMemoryError.html). In order to avoid this, you can increase your JVM's maximum heap size by using the `-Xmx` option. For example, if you want to set it to 50 Gigabytes, you can use this command:
 ```
 java -jar -Xmx50g refactoring-analysis.jar [OPTIONS]
 ```
