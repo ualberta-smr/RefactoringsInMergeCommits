@@ -64,20 +64,21 @@ public class RefactoringAnalysis {
 
     private void cloneAndAnalyzeProject(String projectURL) {
         String projectName = projectURL.substring(projectURL.lastIndexOf('/') + 1);
-        try {
-            cloneProject(projectURL);
-        } catch (JGitInternalException | GitAPIException e) {
-            Utils.log(projectName, e);
-            e.printStackTrace();
-        }
 
+        Project project = Project.findFirst("url = ?", projectURL);
+        if (project == null) {
+            project = new Project(projectURL, projectName);
+            project.saveIt();
+        } else if (project.isDone()) {
+            Utils.log(projectName, String.format("%s has been already analyzed, skipping...", projectName));
+            return;
+        }
         try {
-            Project project = Project.findFirst("url = ?", projectURL);
-            if (project == null) {
-                project = new Project(projectURL, projectName);
-                project.saveIt();
-            }
+            removeProject(projectName);
+            cloneProject(projectURL);
             analyzeProject(project);
+            project.setDone();
+            project.saveIt();
             Utils.log(projectName, "Finished the analysis, removing the repository...");
             removeProject(projectName);
             Utils.log(projectName, "Done with " + projectName);
@@ -126,20 +127,26 @@ public class RefactoringAnalysis {
                     mergeCommitIndex));
 
             // Skip this commit if it already exists in the database.
-            if (MergeCommit.where("commit_hash = ?", mergeCommit.getName()).size() > 0) {
-                Utils.log(project.getName(), "Already exists in the database, skipping...");
-                continue;
+            MergeCommit mergeCommitModel = MergeCommit.findFirst("commit_hash = ?", mergeCommit.getName());
+            if (mergeCommitModel != null) {
+                if (mergeCommitModel.isDone()) {
+                    Utils.log(project.getName(), "Already analyzed, skipping...");
+                    continue;
+                }
+                // Will cascade to dependent records because of foreign key constraints
+                mergeCommitModel.delete();
             }
 
             try {
                 conflictingJavaFiles.clear();
                 boolean isConflicting = gitUtils.isConflicting(mergeCommit, conflictingJavaFiles);
 
-                MergeCommit mergeCommitModel = new MergeCommit(mergeCommit.getName(), isConflicting,
+                mergeCommitModel = new MergeCommit(mergeCommit.getName(), isConflicting,
                         mergeCommit.getParent(0).getName(), mergeCommit.getParent(1).getName(), project);
                 mergeCommitModel.saveIt();
-
                 extractConflictingRegions(gitUtils, mergeCommitModel, conflictingJavaFiles);
+                mergeCommitModel.setDone();
+                mergeCommitModel.saveIt();
             } catch (GitAPIException e) {
                 Utils.log(project.getName(), e);
                 e.printStackTrace();

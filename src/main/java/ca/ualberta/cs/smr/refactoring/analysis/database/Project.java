@@ -14,7 +14,7 @@ public class Project extends Model {
     }
 
     public Project(String url, String name) {
-        set("url", url, "name", name);
+        set("url", url, "name", name, "is_done", false);
     }
 
     public String getName() {
@@ -23,6 +23,14 @@ public class Project extends Model {
 
     public String getURL(){
         return getString("url");
+    }
+
+    public boolean isDone() {
+        return getBoolean("is_done");
+    }
+
+    public void setDone() {
+        setBoolean("is_done", true);
     }
 
 }
