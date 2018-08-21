@@ -33,6 +33,7 @@ class GitUtilsTest {
                 "CONFLICT (rename/rename): Rename plugin_ide.ui/src-lang/melnorme/lang/ide/ui/preferences/ValidatedConfigBlock.java->plugin_ide.ui/src-lang/melnorme/lang/ide/ui/preferences/common/AbstractValidatedBlockExt.java in 614ac2a4c546271a5eb0c42f3bbd868f40cb1431. Rename plugin_ide.ui/src/LANG_PROJECT_ID/ide/ui/launch/LANGUAGE_LaunchShortcut.java->plugin_ide.ui/src-lang/melnorme/lang/ide/ui/preferences/common/AbstractValidatedBlockExt.java in HEAD\n" +
                 "CONFLICT (not covered): Something else happened to a .java file.\n" +
                 "CONFLICT (not covered): Something else happened to this file: A.cpp\n" +
+                "CONFLICT (rename/delete): res/values/phrase_editor.java deleted in HEAD and renamed to app/src/main/res/values/phrase_editor.xml in 9cd3c3549ac0e705746ecc781f3b6f4c90133e9a. Version 9cd3c3549ac0e705746ecc781f3b6f4c90133e9a of app/src/main/res/values/phrase_editor.xml left in tree.\n" +
                 "Auto-merging astroboy/pom.xml\n" +
                 "Automatic merge failed; fix conflicts and then commit the result.\n";
         Map<String, String> expectedJavaConflicts = new HashMap<>();
@@ -46,6 +47,7 @@ class GitUtilsTest {
         expectedJavaConflicts.put("src/main/java/org/numenta/nupic/data/SparseBinaryMatrix.java", "rename/add");
         expectedJavaConflicts.put("plugin_ide.ui/src-lang/melnorme/lang/ide/ui/preferences/common/AbstractValidatedBlockExt.java", "rename/rename");
         expectedJavaConflicts.put("CONFLICT (not covered): Something else happened to a .java file.", "Undetected");
+        expectedJavaConflicts.put("res/values/phrase_editor.java", "rename/delete");
 
         Map<String, String> actualJavaConflicts = new HashMap<>();
         assertTrue(GIT_UTILS_TEST.isConflictingFromMergeOutput(mergeOutput, actualJavaConflicts));
@@ -116,7 +118,8 @@ class GitUtilsTest {
         String logOutput = "commit baef2f510c06096975e435609509e644a531874c\n" +
                 "Author: J. Daniel Kulp <dkulp@apache.org>\n" +
                 "Alright everybody, this next one's coming straight from the heart\n" +
-                "Making the lyrics up right off the top of my headdiff --git a/api/src/main/java/org/apache/cxf/databinding/AbstractDataBinding.java b/api/src/main/java/org/apache/cxf/databinding/AbstractDataBinding.java\n" +
+                "Making the lyrics up right off the top of my head\n" +
+                "diff --git a/api/src/main/java/org/apache/cxf/databinding/AbstractDataBinding.java b/api/src/main/java/org/apache/cxf/databinding/AbstractDataBinding.java\n" +
                 "--- a/api/src/main/java/org/apache/cxf/databinding/AbstractDataBindingNew.java\n" +
                 "+++ b/api/src/main/java/org/apache/cxf/databinding/AbstractDataBinding.java\n" +
                 "@@ -18,46 +18,45 @@\n" +

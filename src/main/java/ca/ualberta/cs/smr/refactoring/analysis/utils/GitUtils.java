@@ -19,7 +19,7 @@ public class GitUtils {
 
     private static final Pattern PATTERN_CONFLICT_RENAME_RENAME = Pattern.compile("CONFLICT \\((rename\\/rename)\\): Rename \"?[^\"]+\"?->\"?([^\"]+)\"? in .+ [Rr]ename \"?[^\"]+\"?->\"?[^\"]+\"? in .+");
     private static final Pattern PATTERN_CONFLICT_RENAME_ADD = Pattern.compile("CONFLICT \\((rename\\/add)\\): Rename \"?[^\"]+\"?->\"?([^\"]+)\"? in \\S+ \"?[^\"]+\"? added in .+");
-    private static final Pattern PATTERN_CONFLICT_DELETE = Pattern.compile("CONFLICT \\(((?:rename|modify)\\/delete)\\): \"?([^\"]+)\"? deleted in \\S+ and (?:renamed|modified) in .+");
+    private static final Pattern PATTERN_CONFLICT_DELETE = Pattern.compile("CONFLICT \\(((?:rename|modify)\\/delete)\\): \"?([^\"]+)\"? deleted in .+ and (?:renamed|modified) .+");
     private static final Pattern PATTERN_CONFLICT_CONTENT = Pattern.compile("CONFLICT \\(((?:content|add\\/add))\\): Merge conflict in \"?([^\"]+)\"?");
     private static final Pattern PATTERN_DIFF_PATH = Pattern.compile("(?:\\-\\-\\-|\\+\\+\\+) (?:a\\/|b\\/)?([\\s\\S]+)");
     private static final Pattern PATTERN_DIFF_RANGE = Pattern.compile("\\@\\@ \\-(\\d+),(\\d+) \\+(\\d+),(\\d+) \\@\\@[\\s\\S]*");
