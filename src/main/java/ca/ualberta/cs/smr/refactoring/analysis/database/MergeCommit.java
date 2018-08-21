@@ -11,7 +11,7 @@ public class MergeCommit extends Model {
 
     public MergeCommit(String commitHash, boolean isConflicting, String parent1, String parent2, Project project) {
         set("commit_hash", commitHash, "project_id", project.getId(), "is_conflicting", isConflicting, "parent_1", parent1,
-                "parent_2", parent2, "id_done", false);
+                "parent_2", parent2, "is_done", false);
     }
 
     public int getProjectId() {
