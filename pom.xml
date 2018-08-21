@@ -66,7 +66,6 @@
                     </descriptorRefs>
                     <finalName>refactoring-analysis</finalName>
                     <appendAssemblyId>false</appendAssemblyId>
-                    <outputDirectory>${project.parent.basedir}</outputDirectory>
                 </configuration>
             </plugin>
 
