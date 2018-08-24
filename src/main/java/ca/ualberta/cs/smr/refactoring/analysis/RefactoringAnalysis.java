@@ -212,6 +212,7 @@ public class RefactoringAnalysis {
         List<Refactoring> refactorings = new ArrayList<>();
         List<CodeRange> sourceCodeRanges = new ArrayList<>();
         List<CodeRange> destCodeRanges = new ArrayList<>();
+        ExecutorService executor = Executors.newSingleThreadExecutor();
         try {
             RefactoringMinerUtils refMinerUtils = new RefactoringMinerUtils(new File(clonePath, project.getName()),
                     project.getURL());
@@ -236,7 +237,6 @@ public class RefactoringAnalysis {
                 Utils.log(project.getName(), String.format("Analyzing commit %.7s with RefMiner... (%d/%d)",
                         conflictingRegionHistory.getCommitHash(), i + 1, historyConfRegions.size()));
                 refactorings.clear();
-                ExecutorService executor = Executors.newSingleThreadExecutor();
                 Future futureRefMiner = executor.submit(() -> {
                     try {
                         refMinerUtils.detectAtCommit(conflictingRegionHistory.getCommitHash(), refactorings);
@@ -280,5 +280,6 @@ public class RefactoringAnalysis {
             Utils.log(project.getName(), e);
             e.printStackTrace();
         }
+            executor.shutdownNow();
     }
 }
