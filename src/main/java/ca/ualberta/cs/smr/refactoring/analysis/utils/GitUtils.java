@@ -30,8 +30,11 @@ public class GitUtils {
 
     public GitUtils(File repoDir) throws IOException, GitAPIException {
         git = Git.open(repoDir);
-        Utils.runSystemCommand(git.getRepository().getWorkTree().getAbsolutePath(),
-                "git", "reset", "--hard");
+        gitReset();
+    }
+
+    public GitUtils(Git git)  {
+        this.git = git;
     }
 
     private GitUtils() {
@@ -62,8 +65,7 @@ public class GitUtils {
     }
 
     public boolean isConflicting(RevCommit mergeCommit, Map<String, String> javaConflicts) throws GitAPIException {
-        Utils.runSystemCommand(git.getRepository().getWorkTree().getAbsolutePath(),
-                "git", "reset", "--hard");
+        gitReset();
         Utils.runSystemCommand(git.getRepository().getWorkTree().getAbsolutePath(),
                 "git", "checkout", mergeCommit.getParent(0).getName());
         String mergeOutput = Utils.runSystemCommand(git.getRepository().getWorkTree().getAbsolutePath(),
@@ -177,6 +179,17 @@ public class GitUtils {
                         Integer.valueOf(diffMatcher.group(4))));
                 currentPaths = new String[2];
             }
+        }
+    }
+
+    public void gitReset() {
+        String resetOutput = Utils.runSystemCommand(git.getRepository().getWorkTree().getAbsolutePath(),
+                "git", "reset", "--hard");
+        if (resetOutput.contains(".git/index.lock")) {
+            Utils.runSystemCommand(git.getRepository().getWorkTree().getAbsolutePath(),
+                    "rm", ".git/index.lock");
+            Utils.runSystemCommand(git.getRepository().getWorkTree().getAbsolutePath(),
+                    "git", "reset", "--hard");
         }
     }
 

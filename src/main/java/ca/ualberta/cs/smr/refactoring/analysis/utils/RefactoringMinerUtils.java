@@ -4,7 +4,6 @@ import gr.uom.java.xmi.UMLClass;
 import gr.uom.java.xmi.UMLOperation;
 import gr.uom.java.xmi.diff.*;
 import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.api.ResetCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.refactoringminer.api.GitHistoryRefactoringMiner;
@@ -14,7 +13,6 @@ import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -32,12 +30,8 @@ public class RefactoringMinerUtils {
 
     }
 
-    public static RefactoringMinerUtils getMockRefactoringMinerUtils() {
-        return new RefactoringMinerUtils();
-    }
-
     public void detectAtCommit(String commitHash, List<Refactoring> refactoringsResult) throws GitAPIException {
-        git.reset().setMode(ResetCommand.ResetType.HARD).call();
+        new GitUtils(git).gitReset();
 
         GitHistoryRefactoringMiner miner = new GitHistoryRefactoringMinerImpl();
         miner.detectAtCommit(git.getRepository(), url, commitHash, new RefactoringHandler() {

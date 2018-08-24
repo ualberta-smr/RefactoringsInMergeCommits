@@ -1,6 +1,5 @@
 package ca.ualberta.cs.smr.refactoring.analysis.database;
 
-import org.eclipse.jgit.api.MergeCommand;
 import org.javalite.activejdbc.Model;
 import org.javalite.activejdbc.annotations.Table;
 
