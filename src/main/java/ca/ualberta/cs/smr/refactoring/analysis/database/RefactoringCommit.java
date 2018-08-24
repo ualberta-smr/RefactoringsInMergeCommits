@@ -33,4 +33,8 @@ public class RefactoringCommit extends Model {
         setBoolean("is_done", true);
     }
 
+    public void setTimedOut() {
+        setInteger("is_done", 2);
+    }
+
 }

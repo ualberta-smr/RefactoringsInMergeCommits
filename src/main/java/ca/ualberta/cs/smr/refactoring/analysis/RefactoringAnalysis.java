@@ -18,8 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.*;
 
 public class RefactoringAnalysis {
 
@@ -237,34 +236,49 @@ public class RefactoringAnalysis {
                 Utils.log(project.getName(), String.format("Analyzing commit %.7s with RefMiner... (%d/%d)",
                         conflictingRegionHistory.getCommitHash(), i + 1, historyConfRegions.size()));
                 refactorings.clear();
-                refMinerUtils.detectAtCommit(conflictingRegionHistory.getCommitHash(), refactorings);
-                for (Refactoring refactoring : refactorings) {
-                    ca.ualberta.cs.smr.refactoring.analysis.database.Refactoring refactoringModel =
-                            new ca.ualberta.cs.smr.refactoring.analysis.database.Refactoring(
-                                    refactoring.getRefactoringType().getDisplayName(),
-                                    refactoring.toString(),
-                                    refactoringCommit);
-                    refactoringModel.saveIt();
+                ExecutorService executor = Executors.newSingleThreadExecutor();
+                Future futureRefMiner = executor.submit(() -> {
+                    try {
+                        refMinerUtils.detectAtCommit(conflictingRegionHistory.getCommitHash(), refactorings);
+                    } catch (GitAPIException e) {
+                        Utils.log(project.getName(), e);
+                        e.printStackTrace();
+                    }
+                });
 
-                    sourceCodeRanges.clear();
-                    destCodeRanges.clear();
-                    refMinerUtils.getRefactoringCodeRanges(refactoring, sourceCodeRanges, destCodeRanges);
-                    sourceCodeRanges.forEach(cr -> new RefactoringRegion('s', cr.getFilePath(), cr.getStartLine(),
-                            cr.getEndLine() - cr.getStartLine(), refactoringModel).saveIt());
-                    destCodeRanges.forEach(cr -> new RefactoringRegion('d', cr.getFilePath(), cr.getStartLine(),
-                            cr.getEndLine() - cr.getStartLine(), refactoringModel).saveIt());
+                try {
+                    futureRefMiner.get(4, TimeUnit.MINUTES);
+                    for (Refactoring refactoring : refactorings) {
+                        ca.ualberta.cs.smr.refactoring.analysis.database.Refactoring refactoringModel =
+                                new ca.ualberta.cs.smr.refactoring.analysis.database.Refactoring(
+                                        refactoring.getRefactoringType().getDisplayName(),
+                                        refactoring.toString(),
+                                        refactoringCommit);
+                        refactoringModel.saveIt();
+
+                        sourceCodeRanges.clear();
+                        destCodeRanges.clear();
+                        refMinerUtils.getRefactoringCodeRanges(refactoring, sourceCodeRanges, destCodeRanges);
+                        sourceCodeRanges.forEach(cr -> new RefactoringRegion('s', cr.getFilePath(), cr.getStartLine(),
+                                cr.getEndLine() - cr.getStartLine(), refactoringModel).saveIt());
+                        destCodeRanges.forEach(cr -> new RefactoringRegion('d', cr.getFilePath(), cr.getStartLine(),
+                                cr.getEndLine() - cr.getStartLine(), refactoringModel).saveIt());
+                    }
+                    refactoringCommit.setDone();
+                    refactoringCommit.saveIt();
+
+                } catch (TimeoutException e) {
+                    Utils.log(project.getName(), String.format("Commit %.7s timed out. Skipping...",
+                            refactoringCommit.getCommitHash()));
+                    refactoringCommit.setTimedOut();
+                    refactoringCommit.saveIt();
                 }
-                refactoringCommit.setDone();
-                refactoringCommit.saveIt();
                 refactorings.clear();
             }
             historyConfRegions.clear();
-        } catch (GitAPIException | IOException e) {
+        } catch (IOException | InterruptedException | ExecutionException e) {
             Utils.log(project.getName(), e);
             e.printStackTrace();
         }
-        refactorings.clear();
-        sourceCodeRanges.clear();
-        destCodeRanges.clear();
     }
 }
