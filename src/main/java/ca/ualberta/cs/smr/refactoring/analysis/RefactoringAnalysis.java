@@ -204,82 +204,99 @@ public class RefactoringAnalysis {
         rightConflictingRegionHistory.clear();
     }
 
-
     private void analyzeProjectWithRefMiner(Project project) {
         List<ConflictingRegionHistory> historyConfRegions =
                 ConflictingRegionHistory.where("project_id = ?", project.getId());
 
-        List<Refactoring> refactorings = new ArrayList<>();
-        List<CodeRange> sourceCodeRanges = new ArrayList<>();
-        List<CodeRange> destCodeRanges = new ArrayList<>();
         ExecutorService executor = Executors.newSingleThreadExecutor();
         try {
-            RefactoringMinerUtils refMinerUtils = new RefactoringMinerUtils(new File(clonePath, project.getName()),
-                    project.getURL());
+            File projectFile = new File(clonePath, project.getName());
+            RefactoringMinerUtils refMinerUtils = new RefactoringMinerUtils(projectFile, project.getURL());
+
             for (int i = 0; i < historyConfRegions.size(); i++) {
                 ConflictingRegionHistory conflictingRegionHistory = historyConfRegions.get(i);
-
-                // Check if this commit has already been analyzed with RefMiner
-                RefactoringCommit refactoringCommit = RefactoringCommit.findFirst("commit_hash = ?",
-                        conflictingRegionHistory.getCommitHash());
-                if (refactoringCommit != null) {
-                    if (refactoringCommit.isDone()) {
-                        continue;
-                    } else {
-                        ca.ualberta.cs.smr.refactoring.analysis.database.Refactoring.delete(
-                                "refactoring_commit_id = ?", refactoringCommit.getID());
-                    }
-                } else {
-                    refactoringCommit = new RefactoringCommit(conflictingRegionHistory.getCommitHash(), project.getId());
-                    refactoringCommit.saveIt();
-                }
-
                 Utils.log(project.getName(), String.format("Analyzing commit %.7s with RefMiner... (%d/%d)",
                         conflictingRegionHistory.getCommitHash(), i + 1, historyConfRegions.size()));
-                refactorings.clear();
-                Future futureRefMiner = executor.submit(() -> {
-                    try {
-                        refMinerUtils.detectAtCommit(conflictingRegionHistory.getCommitHash(), refactorings);
-                    } catch (GitAPIException e) {
-                        Utils.log(project.getName(), e);
-                        e.printStackTrace();
-                    }
-                });
 
-                try {
-                    futureRefMiner.get(4, TimeUnit.MINUTES);
-                    for (Refactoring refactoring : refactorings) {
-                        ca.ualberta.cs.smr.refactoring.analysis.database.Refactoring refactoringModel =
-                                new ca.ualberta.cs.smr.refactoring.analysis.database.Refactoring(
-                                        refactoring.getRefactoringType().getDisplayName(),
-                                        refactoring.toString(),
-                                        refactoringCommit);
-                        refactoringModel.saveIt();
-
-                        sourceCodeRanges.clear();
-                        destCodeRanges.clear();
-                        refMinerUtils.getRefactoringCodeRanges(refactoring, sourceCodeRanges, destCodeRanges);
-                        sourceCodeRanges.forEach(cr -> new RefactoringRegion('s', cr.getFilePath(), cr.getStartLine(),
-                                cr.getEndLine() - cr.getStartLine(), refactoringModel).saveIt());
-                        destCodeRanges.forEach(cr -> new RefactoringRegion('d', cr.getFilePath(), cr.getStartLine(),
-                                cr.getEndLine() - cr.getStartLine(), refactoringModel).saveIt());
-                    }
-                    refactoringCommit.setDone();
-                    refactoringCommit.saveIt();
-
-                } catch (TimeoutException e) {
-                    Utils.log(project.getName(), String.format("Commit %.7s timed out. Skipping...",
-                            refactoringCommit.getCommitHash()));
-                    refactoringCommit.setTimedOut();
-                    refactoringCommit.saveIt();
+                RefactoringCommit refactoringCommit = populateRefactoringCommit(conflictingRegionHistory);
+                if (refactoringCommit == null) {
+                    Utils.log(project.getName(), String.format("Already analyzed %.7s with RefMiner. Skipping...",
+                            conflictingRegionHistory.getCommitHash()));
+                    continue;
                 }
-                refactorings.clear();
+
+                asyncRunRefMiner(executor, refMinerUtils, project, conflictingRegionHistory, refactoringCommit);
             }
-            historyConfRegions.clear();
         } catch (IOException | InterruptedException | ExecutionException e) {
             Utils.log(project.getName(), e);
             e.printStackTrace();
         }
-            executor.shutdownNow();
+        historyConfRegions.clear();
+        executor.shutdownNow();
+    }
+
+    private RefactoringCommit populateRefactoringCommit(ConflictingRegionHistory conflictingRegionHistory) {
+        RefactoringCommit refactoringCommit = RefactoringCommit.findFirst("commit_hash = ?",
+                conflictingRegionHistory.getCommitHash());
+
+        if (refactoringCommit == null) {
+            refactoringCommit = new RefactoringCommit(conflictingRegionHistory.getCommitHash(),
+                    conflictingRegionHistory.getProjectId());
+            refactoringCommit.saveIt();
+        } else if (refactoringCommit.isDone()) {
+            return null;
+        } else {
+            ca.ualberta.cs.smr.refactoring.analysis.database.Refactoring.delete(
+                    "refactoring_commit_id = ?", refactoringCommit.getID());
+        }
+        return refactoringCommit;
+    }
+
+    private void asyncRunRefMiner(ExecutorService executor, RefactoringMinerUtils refMinerUtils, Project project,
+                                  ConflictingRegionHistory conflictingRegionHistory, RefactoringCommit refactoringCommit)
+                               throws InterruptedException, ExecutionException {
+        List<Refactoring> refactorings = new ArrayList<>();
+        Future futureRefMiner = executor.submit(() -> {
+            try {
+                refMinerUtils.detectAtCommit(conflictingRegionHistory.getCommitHash(), refactorings);
+            } catch (GitAPIException e) {
+                Utils.log(project.getName(), e);
+                e.printStackTrace();
+            }
+        });
+
+        try {
+            // Wait up to 4 minutes for RefactoringMiner to finish its analysis.
+            futureRefMiner.get(4, TimeUnit.MINUTES);
+            processRefactorings(refactorings, refactoringCommit, refMinerUtils);
+            refactoringCommit.setDone();
+            refactoringCommit.saveIt();
+
+        } catch (TimeoutException e) {
+            Utils.log(project.getName(), String.format("Commit %.7s timed out. Skipping...",
+                    refactoringCommit.getCommitHash()));
+            refactoringCommit.setTimedOut();
+            refactoringCommit.saveIt();
+        }
+    }
+
+    private void processRefactorings(List<Refactoring> refactorings, RefactoringCommit refactoringCommit,
+                                     RefactoringMinerUtils refMinerUtils) {
+        for (Refactoring refactoring : refactorings) {
+            ca.ualberta.cs.smr.refactoring.analysis.database.Refactoring refactoringModel =
+                    new ca.ualberta.cs.smr.refactoring.analysis.database.Refactoring(
+                            refactoring.getRefactoringType().getDisplayName(),
+                            refactoring.toString(),
+                            refactoringCommit);
+            refactoringModel.saveIt();
+
+            List<CodeRange> sourceCodeRanges = new ArrayList<>();
+            List<CodeRange> destCodeRanges = new ArrayList<>();
+            refMinerUtils.getRefactoringCodeRanges(refactoring, sourceCodeRanges, destCodeRanges);
+            sourceCodeRanges.forEach(cr -> new RefactoringRegion('s', cr.getFilePath(), cr.getStartLine(),
+                    cr.getEndLine() - cr.getStartLine(), refactoringModel).saveIt());
+            destCodeRanges.forEach(cr -> new RefactoringRegion('d', cr.getFilePath(), cr.getStartLine(),
+                    cr.getEndLine() - cr.getStartLine(), refactoringModel).saveIt());
+        }
     }
 }
