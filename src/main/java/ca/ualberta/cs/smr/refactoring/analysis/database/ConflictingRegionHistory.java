@@ -40,5 +40,9 @@ public class ConflictingRegionHistory extends Model {
         return getInteger("project_id");
     }
 
+    public void setCommitDetails(String authorName, String authorEmail, int timestamp) {
+        set("author_name", authorName, "author_email", authorEmail,
+                "timestamp", timestamp);
+    }
 
 }

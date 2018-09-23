@@ -33,8 +33,10 @@ public class RefactoringAnalysis {
 
     public void start(int parallelism) {
         try {
-            DatabaseUtils.createDatabase();
-            runParallel(parallelism);
+            addExtraCommitInfo(1);
+
+//            DatabaseUtils.createDatabase();
+//            runParallel(parallelism);
         } catch (Throwable e) {
             Utils.log(null, e);
             e.printStackTrace();
@@ -312,5 +314,57 @@ public class RefactoringAnalysis {
             destCodeRanges.forEach(cr -> new RefactoringRegion('d', cr.getFilePath(), cr.getStartLine(),
                     cr.getEndLine() - cr.getStartLine(), refactoringModel).saveIt());
         }
+    }
+
+    /**
+     * Adds author information and timestamp for each existing commit in the database.
+     *
+     * @param parallelism
+     * @throws Exception
+     */
+    private void addExtraCommitInfo(int parallelism) throws Exception {
+        Base.open();
+        List<Project> projects = Project.findAll();
+        ForkJoinPool forkJoinPool = null;
+        try {
+            forkJoinPool = new ForkJoinPool(parallelism);
+            forkJoinPool.submit(() ->
+                    projects.parallelStream().forEach(project -> {
+                        Base.open();
+                        try {
+                            removeProject(project.getName());
+                            cloneProject(project.getURL());
+                            GitUtils gitUtils = new GitUtils(new File(clonePath, project.getName()));
+                            MergeCommit.find("project_id = ?", project.getId()).forEach(mcModel -> {
+                                RevCommit commit = gitUtils.populateCommit(((MergeCommit) mcModel).getCommitHash());
+                                if (commit != null) {
+                                    ((MergeCommit) mcModel).setCommitDetails(commit.getAuthorIdent().getName(),
+                                            commit.getAuthorIdent().getEmailAddress(), commit.getCommitTime());
+                                    mcModel.saveIt();
+                                }
+                            });
+                            ConflictingRegionHistory.find("project_id = ?", project.getId()).forEach(crhModel -> {
+                                RevCommit commit = gitUtils.populateCommit(((ConflictingRegionHistory) crhModel).getCommitHash());
+                                if (commit != null) {
+                                    ((ConflictingRegionHistory) crhModel).setCommitDetails(commit.getAuthorIdent().getName(),
+                                            commit.getAuthorIdent().getEmailAddress(), commit.getCommitTime());
+                                    crhModel.saveIt();
+                                }
+                            });
+                            removeProject(project.getName());
+                        } catch (Exception e) {
+                            Utils.log(project.getName(), e);
+                        }
+                        Base.close();
+                    })
+            ).get();
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+        } finally {
+            if (forkJoinPool != null) {
+                forkJoinPool.shutdown();
+            }
+        }
+        Base.close();
     }
 }

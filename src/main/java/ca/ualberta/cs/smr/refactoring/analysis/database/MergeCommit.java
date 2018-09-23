@@ -11,7 +11,8 @@ public class MergeCommit extends Model {
     public MergeCommit(String commitHash, boolean isConflicting, String parent1, String parent2, Project project,
                        String authorName, String authorEmail, int timestamp) {
         set("commit_hash", commitHash, "project_id", project.getId(), "is_conflicting", isConflicting, "parent_1", parent1,
-                "parent_2", parent2, "is_done", false);
+                "parent_2", parent2, "is_done", false, "author_name", authorName, "author_email", authorEmail,
+                "timestamp", timestamp);
     }
 
     public int getProjectId() {
@@ -37,5 +38,10 @@ public class MergeCommit extends Model {
 
     public void setDone() {
         setBoolean("is_done", true);
+    }
+
+    public void setCommitDetails(String authorName, String authorEmail, int timestamp) {
+        set("author_name", authorName, "author_email", authorEmail,
+                "timestamp", timestamp);
     }
 }
