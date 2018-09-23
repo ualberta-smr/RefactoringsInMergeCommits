@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.Consumer;
 
 public class RefactoringAnalysis {
 
@@ -141,7 +142,9 @@ public class RefactoringAnalysis {
                 boolean isConflicting = gitUtils.isConflicting(mergeCommit, conflictingJavaFiles);
 
                 mergeCommitModel = new MergeCommit(mergeCommit.getName(), isConflicting,
-                        mergeCommit.getParent(0).getName(), mergeCommit.getParent(1).getName(), project);
+                        mergeCommit.getParent(0).getName(), mergeCommit.getParent(1).getName(), project,
+                        mergeCommit.getAuthorIdent().getName(), mergeCommit.getAuthorIdent().getEmailAddress(),
+                        mergeCommit.getCommitTime());
                 mergeCommitModel.saveIt();
                 extractConflictingRegions(gitUtils, mergeCommitModel, conflictingJavaFiles);
                 mergeCommitModel.setDone();
@@ -185,17 +188,28 @@ public class RefactoringAnalysis {
                     gitUtils.getConflictingRegionHistory(mergeCommit.getParent2(), mergeCommit.getParent1(),
                             path, conflictingLines[1], rightConflictingRegionHistory);
 
-                    leftConflictingRegionHistory.forEach(codeRegionChange -> new ConflictingRegionHistory(
-                            codeRegionChange.commitHash, 1,
-                            codeRegionChange.oldStartLine, codeRegionChange.oldLength, codeRegionChange.oldPath,
-                            codeRegionChange.newStartLine, codeRegionChange.newLength, codeRegionChange.newPath,
-                            conflictingRegion).saveIt());
-                    rightConflictingRegionHistory.forEach(codeRegionChange -> new ConflictingRegionHistory(
-                            codeRegionChange.commitHash, 2,
-                            codeRegionChange.oldStartLine, codeRegionChange.oldLength, codeRegionChange.oldPath,
-                            codeRegionChange.newStartLine, codeRegionChange.newLength, codeRegionChange.newPath,
-                            conflictingRegion).saveIt());
-
+                    leftConflictingRegionHistory.forEach(codeRegionChange -> {
+                        RevCommit commit = gitUtils.populateCommit(codeRegionChange.commitHash);
+                        String authorName = commit == null ? null : commit.getAuthorIdent().getName();
+                        String authorEmail = commit == null ? null : commit.getAuthorIdent().getEmailAddress();
+                        int timestamp = commit == null ? 0 : commit.getCommitTime();
+                        new ConflictingRegionHistory(
+                                codeRegionChange.commitHash, 1,
+                                codeRegionChange.oldStartLine, codeRegionChange.oldLength, codeRegionChange.oldPath,
+                                codeRegionChange.newStartLine, codeRegionChange.newLength, codeRegionChange.newPath,
+                                conflictingRegion, authorName, authorEmail, timestamp).saveIt();
+                    });
+                    rightConflictingRegionHistory.forEach(codeRegionChange -> {
+                        RevCommit commit = gitUtils.populateCommit(codeRegionChange.commitHash);
+                        String authorName = commit == null ? null : commit.getAuthorIdent().getName();
+                        String authorEmail = commit == null ? null : commit.getAuthorIdent().getEmailAddress();
+                        int timestamp = commit == null ? 0 : commit.getCommitTime();
+                        new ConflictingRegionHistory(
+                                codeRegionChange.commitHash, 2,
+                                codeRegionChange.oldStartLine, codeRegionChange.oldLength, codeRegionChange.oldPath,
+                                codeRegionChange.newStartLine, codeRegionChange.newLength, codeRegionChange.newPath,
+                                conflictingRegion, authorName, authorEmail, timestamp).saveIt();
+                    });
                 }
             }
         }
@@ -254,7 +268,7 @@ public class RefactoringAnalysis {
 
     private void asyncRunRefMiner(ExecutorService executor, RefactoringMinerUtils refMinerUtils, Project project,
                                   ConflictingRegionHistory conflictingRegionHistory, RefactoringCommit refactoringCommit)
-                               throws InterruptedException, ExecutionException {
+            throws InterruptedException, ExecutionException {
         List<Refactoring> refactorings = new ArrayList<>();
         Future futureRefMiner = executor.submit(() -> {
             try {

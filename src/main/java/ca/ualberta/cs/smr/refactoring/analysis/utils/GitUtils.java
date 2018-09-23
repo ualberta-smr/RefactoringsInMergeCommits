@@ -3,6 +3,8 @@ package ca.ualberta.cs.smr.refactoring.analysis.utils;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.errors.StopWalkException;
+import org.eclipse.jgit.lib.AnyObjectId;
+import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.revwalk.filter.RevFilter;
@@ -190,6 +192,16 @@ public class GitUtils {
                     "rm", ".git/index.lock");
             Utils.runSystemCommand(git.getRepository().getWorkTree().getAbsolutePath(),
                     "git", "reset", "--hard");
+        }
+    }
+
+    public RevCommit populateCommit(String commitHash) {
+        try (RevWalk walk = new RevWalk(git.getRepository())) {
+            RevCommit commit = walk.parseCommit(ObjectId.fromString(commitHash));
+            walk.dispose();
+            return commit;
+        } catch (Exception e) {
+            return null;
         }
     }
 

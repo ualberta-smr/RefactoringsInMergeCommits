@@ -8,7 +8,8 @@ public class MergeCommit extends Model {
 
     public MergeCommit(){}
 
-    public MergeCommit(String commitHash, boolean isConflicting, String parent1, String parent2, Project project) {
+    public MergeCommit(String commitHash, boolean isConflicting, String parent1, String parent2, Project project,
+                       String authorName, String authorEmail, int timestamp) {
         set("commit_hash", commitHash, "project_id", project.getId(), "is_conflicting", isConflicting, "parent_1", parent1,
                 "parent_2", parent2, "is_done", false);
     }
