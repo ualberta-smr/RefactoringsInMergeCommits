@@ -26,7 +26,7 @@ public class RefactoringMinerUtils {
         git = Git.open(repoDir);
     }
 
-    private RefactoringMinerUtils () {
+    private RefactoringMinerUtils() {
 
     }
 
@@ -73,13 +73,11 @@ public class RefactoringMinerUtils {
                 break;
             case EXTRACT_INTERFACE:
             case EXTRACT_SUPERCLASS:
-                // TODO: Ask Nikos to implement changes made to ExtractSuperclassRefactoring.
-                UMLClass extractedClass = ((ExtractSuperclassRefactoring)refactoring).getExtractedClass();
+                UMLClass extractedClass = ((ExtractSuperclassRefactoring) refactoring).getExtractedClass();
                 destCodeRange.add(extractedClass.getLocationInfo().codeRange());
 
-                Set<UMLClass> subClasses = ((ExtractSuperclassRefactoring)refactoring).getSubclassUMLSet();
+                Set<UMLClass> subClasses = ((ExtractSuperclassRefactoring) refactoring).getSubclassUMLSet();
                 subClasses.forEach(umlClass -> {
-                    // TODO: This doesn't look very accurate.
                     sourceCodeRange.add(umlClass.getLocationInfo().codeRange());
                     destCodeRange.add(umlClass.getLocationInfo().codeRange());
                 });
@@ -96,18 +94,42 @@ public class RefactoringMinerUtils {
                 destCodeRange.add(extractedOperation.getLocationInfo().codeRange());
                 destCodeRange.add(sourceAfterExtraction.getLocationInfo().codeRange());
                 break;
-            // TODO: Ask Nikos to implement changes made to the following classes.
             case MOVE_RENAME_CLASS:
-                sourceCodeRange.add(((MoveAndRenameClassRefactoring)refactoring).getOriginalClass().getLocationInfo().codeRange());
-                destCodeRange.add(((MoveAndRenameClassRefactoring)refactoring).getRenamedClass().getLocationInfo().codeRange());
+                sourceCodeRange.add(((MoveAndRenameClassRefactoring) refactoring).getOriginalClass().getLocationInfo().codeRange());
+                destCodeRange.add(((MoveAndRenameClassRefactoring) refactoring).getRenamedClass().getLocationInfo().codeRange());
                 break;
             case MOVE_CLASS:
-                sourceCodeRange.add(((MoveClassRefactoring)refactoring).getOriginalClass().getLocationInfo().codeRange());
-                destCodeRange.add(((MoveClassRefactoring)refactoring).getMovedClass().getLocationInfo().codeRange());
+                sourceCodeRange.add(((MoveClassRefactoring) refactoring).getOriginalClass().getLocationInfo().codeRange());
+                destCodeRange.add(((MoveClassRefactoring) refactoring).getMovedClass().getLocationInfo().codeRange());
                 break;
             case RENAME_CLASS:
-                sourceCodeRange.add(((RenameClassRefactoring)refactoring).getOriginalClass().getLocationInfo().codeRange());
-                destCodeRange.add(((RenameClassRefactoring)refactoring).getRenamedClass().getLocationInfo().codeRange());
+                sourceCodeRange.add(((RenameClassRefactoring) refactoring).getOriginalClass().getLocationInfo().codeRange());
+                destCodeRange.add(((RenameClassRefactoring) refactoring).getRenamedClass().getLocationInfo().codeRange());
+                break;
+            case EXTRACT_VARIABLE:
+                destCodeRange.add(((ExtractVariableRefactoring) refactoring).getExtractedVariableDeclarationCodeRange());
+                break;
+            case RENAME_PARAMETER:
+            case RENAME_VARIABLE:
+            case PARAMETERIZE_VARIABLE:
+                sourceCodeRange.add(((RenameVariableRefactoring) refactoring).getOriginalVariable().codeRange());
+                destCodeRange.add(((RenameVariableRefactoring) refactoring).getRenamedVariable().codeRange());
+                break;
+            case RENAME_ATTRIBUTE:
+                sourceCodeRange.add(((RenameAttributeRefactoring) refactoring).getOriginalAttribute().codeRange());
+                destCodeRange.add(((RenameAttributeRefactoring) refactoring).getRenamedAttribute().codeRange());
+                break;
+            case MOVE_ATTRIBUTE:
+            case PULL_UP_ATTRIBUTE:
+            case PUSH_DOWN_ATTRIBUTE:
+                sourceCodeRange.add(((MoveAttributeRefactoring) refactoring).getSourceAttributeCodeRangeBeforeMove());
+                destCodeRange.add(((MoveAttributeRefactoring) refactoring).getTargetAttributeCodeRangeAfterMove());
+                break;
+            case RENAME_PACKAGE:
+                ((RenamePackageRefactoring) refactoring).getMoveClassRefactorings().forEach(ref -> {
+                    sourceCodeRange.add(ref.getOriginalClass().getLocationInfo().codeRange());
+                    destCodeRange.add(ref.getMovedClass().getLocationInfo().codeRange());
+                });
                 break;
         }
     }

@@ -10,7 +10,7 @@ public class RefactoringCommit extends Model {
     }
 
     public RefactoringCommit(String commitHash, Object projectId) {
-        set("commit_hash", commitHash, "project_id", projectId, "is_done", false);
+        set("commit_hash", commitHash, "project_id", projectId, "is_done", 0);
     }
 
     public int getID() {
@@ -25,12 +25,12 @@ public class RefactoringCommit extends Model {
         return getString("commit_hash");
     }
 
-    public boolean isDone() {
+    public boolean isProcessed() {
         return getBoolean("is_done");
     }
 
     public void setDone() {
-        setBoolean("is_done", true);
+        setInteger("is_done", 1);
     }
 
     public void setTimedOut() {

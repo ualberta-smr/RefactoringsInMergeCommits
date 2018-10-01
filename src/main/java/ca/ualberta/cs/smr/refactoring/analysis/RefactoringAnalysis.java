@@ -19,7 +19,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.function.Consumer;
 
 public class RefactoringAnalysis {
 
@@ -33,10 +32,8 @@ public class RefactoringAnalysis {
 
     public void start(int parallelism) {
         try {
-            addExtraCommitInfo(1);
-
-//            DatabaseUtils.createDatabase();
-//            runParallel(parallelism);
+            DatabaseUtils.createDatabase();
+            runParallel(parallelism);
         } catch (Throwable e) {
             Utils.log(null, e);
             e.printStackTrace();
@@ -259,7 +256,7 @@ public class RefactoringAnalysis {
             refactoringCommit = new RefactoringCommit(conflictingRegionHistory.getCommitHash(),
                     conflictingRegionHistory.getProjectId());
             refactoringCommit.saveIt();
-        } else if (refactoringCommit.isDone()) {
+        } else if (refactoringCommit.isProcessed()) {
             return null;
         } else {
             ca.ualberta.cs.smr.refactoring.analysis.database.Refactoring.delete(
@@ -325,38 +322,12 @@ public class RefactoringAnalysis {
     private void addExtraCommitInfo(int parallelism) throws Exception {
         Base.open();
         List<Project> projects = Project.findAll();
+        Utils.log(null, "Updating " + projects.size() + " projects...");
         ForkJoinPool forkJoinPool = null;
         try {
             forkJoinPool = new ForkJoinPool(parallelism);
             forkJoinPool.submit(() ->
-                    projects.parallelStream().forEach(project -> {
-                        Base.open();
-                        try {
-                            removeProject(project.getName());
-                            cloneProject(project.getURL());
-                            GitUtils gitUtils = new GitUtils(new File(clonePath, project.getName()));
-                            MergeCommit.find("project_id = ?", project.getId()).forEach(mcModel -> {
-                                RevCommit commit = gitUtils.populateCommit(((MergeCommit) mcModel).getCommitHash());
-                                if (commit != null) {
-                                    ((MergeCommit) mcModel).setCommitDetails(commit.getAuthorIdent().getName(),
-                                            commit.getAuthorIdent().getEmailAddress(), commit.getCommitTime());
-                                    mcModel.saveIt();
-                                }
-                            });
-                            ConflictingRegionHistory.find("project_id = ?", project.getId()).forEach(crhModel -> {
-                                RevCommit commit = gitUtils.populateCommit(((ConflictingRegionHistory) crhModel).getCommitHash());
-                                if (commit != null) {
-                                    ((ConflictingRegionHistory) crhModel).setCommitDetails(commit.getAuthorIdent().getName(),
-                                            commit.getAuthorIdent().getEmailAddress(), commit.getCommitTime());
-                                    crhModel.saveIt();
-                                }
-                            });
-                            removeProject(project.getName());
-                        } catch (Exception e) {
-                            Utils.log(project.getName(), e);
-                        }
-                        Base.close();
-                    })
+                    projects.parallelStream().forEach(this::addExtraCommitInfoForProject)
             ).get();
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
@@ -366,5 +337,114 @@ public class RefactoringAnalysis {
             }
         }
         Base.close();
+    }
+
+    private void addExtraCommitInfoForProject(Project project) {
+        try {
+            Base.open();
+            List<MergeCommit> mergeCommits = MergeCommit.find("project_id = ? and author_email is null", project.getId());
+            List<ConflictingRegionHistory> conflictingRegionHistories = ConflictingRegionHistory.find("project_id = ? and author_email is null", project.getId());
+            if (mergeCommits.size() > 0 || conflictingRegionHistories.size() > 0) {
+                removeProject(project.getName());
+                cloneProject(project.getURL());
+                GitUtils gitUtils = new GitUtils(new File(clonePath, project.getName()));
+                mergeCommits.forEach(mcModel -> {
+                    RevCommit commit = gitUtils.populateCommit(mcModel.getCommitHash());
+                    if (commit != null) {
+                        mcModel.setCommitDetails(commit.getAuthorIdent().getName(),
+                                commit.getAuthorIdent().getEmailAddress(), commit.getCommitTime());
+                        mcModel.saveIt();
+                    }
+                });
+                conflictingRegionHistories.forEach(crhModel -> {
+                    RevCommit commit = gitUtils.populateCommit(crhModel.getCommitHash());
+                    if (commit != null) {
+                        crhModel.setCommitDetails(commit.getAuthorIdent().getName(),
+                                commit.getAuthorIdent().getEmailAddress(), commit.getCommitTime());
+                        crhModel.saveIt();
+                    }
+                });
+                removeProject(project.getName());
+            }
+            Base.close();
+        } catch (Exception e) {
+            Utils.log(project.getName(), e);
+        }
+    }
+
+    /**
+     * Adds code range information for a few types of refactorings that were not initially implemented.
+     *
+     * @param parallelism
+     * @throws Exception
+     */
+    private void addRefactoringsCodeRange(int parallelism) throws Exception {
+        Base.open();
+        List<Project> projects = Project.findAll();
+        Utils.log(null, "Total " + projects.size() + " projects...");
+        ForkJoinPool forkJoinPool = null;
+        try {
+            forkJoinPool = new ForkJoinPool(parallelism);
+            forkJoinPool.submit(() ->
+                    projects.parallelStream().forEach(this::addRefactoringsCodeRangeForProject)
+            ).get();
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+        } finally {
+            if (forkJoinPool != null) {
+                forkJoinPool.shutdown();
+            }
+        }
+        Base.close();
+    }
+
+    private void addRefactoringsCodeRangeForProject(Project project) {
+        try {
+            Base.open();
+            String query = "project_id = ? and (refactoring_type = \"Change Package\" or refactoring_type = \"Pull Up Attribute\" or refactoring_type = \"Push Down Attribute\" or refactoring_type = \"Move Attribute\")";
+            List<ca.ualberta.cs.smr.refactoring.analysis.database.Refactoring> allSuchRefactorings =
+                    ca.ualberta.cs.smr.refactoring.analysis.database.Refactoring.find(query, project.getId());
+
+            List<ca.ualberta.cs.smr.refactoring.analysis.database.Refactoring> missingRefactorings = new ArrayList<>();
+            for (ca.ualberta.cs.smr.refactoring.analysis.database.Refactoring refactoring : allSuchRefactorings) {
+                if (RefactoringRegion.find("refactoring_id = ?", refactoring.getId()).size() == 0) {
+                    missingRefactorings.add(refactoring);
+                }
+            }
+
+            if (missingRefactorings.size() > 0) {
+                removeProject(project.getName());
+                cloneProject(project.getURL());
+                RefactoringMinerUtils refactoringMinerUtils =
+                        new RefactoringMinerUtils(new File(clonePath, project.getName()), project.getURL());
+
+                for (int i = 0; i < missingRefactorings.size(); i++) {
+                    ca.ualberta.cs.smr.refactoring.analysis.database.Refactoring refactoring = missingRefactorings.get(i);
+                    Utils.log(project.getName(), "Processing refactoring " + (i + 1) + "/" + missingRefactorings.size());
+
+                    List<Refactoring> detectedRefactorings = new ArrayList<>();
+                    refactoringMinerUtils.detectAtCommit(refactoring.getCommitHash(), detectedRefactorings);
+                    for (Refactoring detectedRefactoring : detectedRefactorings) {
+                        ca.ualberta.cs.smr.refactoring.analysis.database.Refactoring existingRefactoring =
+                                ca.ualberta.cs.smr.refactoring.analysis.database.Refactoring.findFirst(
+                                        "commit_hash = ? and refactoring_detail = ? and not exists (select * from refactoring_region where refactoring_id = refactoring.id)",
+                                        refactoring.getCommitHash(), detectedRefactoring.toString());
+                        if (existingRefactoring != null) {
+                            List<CodeRange> sourceCodeRanges = new ArrayList<>();
+                            List<CodeRange> destCodeRanges = new ArrayList<>();
+                            refactoringMinerUtils.getRefactoringCodeRanges(detectedRefactoring, sourceCodeRanges, destCodeRanges);
+                            sourceCodeRanges.forEach(cr -> new RefactoringRegion('s', cr.getFilePath(), cr.getStartLine(),
+                                    cr.getEndLine() - cr.getStartLine(), existingRefactoring).saveIt());
+                            destCodeRanges.forEach(cr -> new RefactoringRegion('d', cr.getFilePath(), cr.getStartLine(),
+                                    cr.getEndLine() - cr.getStartLine(), existingRefactoring).saveIt());
+                        }
+                    }
+                }
+                removeProject(project.getName());
+            }
+            Base.close();
+        } catch (Exception e) {
+            Utils.log(project.getName(), e);
+        }
     }
 }
