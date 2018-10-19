@@ -272,7 +272,7 @@ public class RefactoringAnalysis {
         Future futureRefMiner = executor.submit(() -> {
             try {
                 refMinerUtils.detectAtCommit(conflictingRegionHistory.getCommitHash(), refactorings);
-            } catch (GitAPIException e) {
+            } catch (Exception e) {
                 Utils.log(project.getName(), e);
                 e.printStackTrace();
             }

@@ -30,7 +30,7 @@ public class RefactoringMinerUtils {
 
     }
 
-    public void detectAtCommit(String commitHash, List<Refactoring> refactoringsResult) throws GitAPIException {
+    public void detectAtCommit(String commitHash, List<Refactoring> refactoringsResult) throws Exception {
         new GitUtils(git).gitReset();
 
         GitHistoryRefactoringMiner miner = new GitHistoryRefactoringMinerImpl();
