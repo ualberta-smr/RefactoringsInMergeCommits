@@ -41,21 +41,24 @@ public class DatabaseUtils {
                             Math.min(jdbcSpec.getUrl().indexOf("/", 13), jdbcSpec.getUrl().length())),
                     jdbcSpec.getUser(), jdbcSpec.getPassword());
 
-            DatabaseUtils.executeFile(
-                    Thread.currentThread().getContextClassLoader().getResourceAsStream(CREATE_SCHEMA_FILE), db);
+            String dbName = jdbcSpec.getUrl().substring(jdbcSpec.getUrl().indexOf("/", 13) + 1);
+            DatabaseUtils.createDatabase(
+                    Thread.currentThread().getContextClassLoader().getResourceAsStream(CREATE_SCHEMA_FILE), db,
+                    "refactoring_analysis", dbName);
             db.close();
         }
     }
 
 
-    private static void executeFile(InputStream inputStream, DB db) throws Exception {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+    private static void createDatabase(InputStream scriptInputStream, DB db, String defaultDbName, String newDbName)
+            throws Exception {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(scriptInputStream));
         String delimiter = DEFAULT_DELIMITER;
         List<String> statements = new ArrayList<>();
         String currentStatement = "";
         String line;
         while ((line = reader.readLine()) != null) {
-            line = line.trim();
+            line = line.trim().replace(defaultDbName, newDbName);
             if (!commentLine(line) && !blank(line)) {
                 if (line.startsWith(DELIMITER_KEYWORD)) {
                     delimiter = line.substring(10).trim();
@@ -72,7 +75,7 @@ public class DatabaseUtils {
         }
         try {
             reader.close();
-            inputStream.close();
+            scriptInputStream.close();
         } catch (Exception e) {
             e.printStackTrace();
         }
