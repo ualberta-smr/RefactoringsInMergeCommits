@@ -2689,7 +2689,6 @@ https://github.com/nadam/nfc-reader
 https://github.com/masterthought/jenkins-cucumber-jvm-reports-plugin-java
 https://github.com/johnkil/Android-CollapsibleSearchMenu
 https://github.com/jgilfelt/android-mapviewballoons
-https://github.com/android/platform_frameworks_base
 https://github.com/johnkil/SideNavigation
 https://github.com/freshplanet/ANE-Facebook
 https://github.com/dhanji/sitebricks
