@@ -51,3 +51,6 @@ You can run the JAR file with the following command:
  After the program has finished running, you can use the Python scripts in the [stats](stats) folder to look at the results.
  - [data_resolver.py](stats/data_resolver.py): This script will print a summary of stats, including total number of merge scenarios, merge scenarios with involved refacotirngs, conflicting regions with involved refactorings, etc.
  - [plotter.py](stats/plotter.py): This script can draw a number of different plots.
+ 
+ ## Replicate the SANER 2019 submission
+For our SANER 2019 submission, we used the provided [reposList.txt](reposList.txt) list of repositories. More information on how we created this list can be [found here](dataset).
