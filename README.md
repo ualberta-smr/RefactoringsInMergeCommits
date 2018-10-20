@@ -28,7 +28,7 @@ Run the following command to compile the project and create an executable JAR fi
 ```
 ./mvnw clean assembly:single clean
 ```
-This command will create refactoring-analysis.jar file in the root directory.
+This command will create `refactoring-analysis.jar` file in the root directory.
 
 ### 4. Run the JAR file
 You can run the JAR file with the following command:
