@@ -10,13 +10,7 @@ This project analyzes merge commits in git repositries and determines whether re
 
 ## How to run
 
-### 1. Compile the project
-Clone the repository and run the following command to compile the project and create an executable JAR file:
-```
-./mvnw clean compile assembly:single
-```
-
-### 2. Create a database configuration file
+### 1. Create a database configuration file
 Edit the `database.properties` file and add your MySQL username and password:
 ```
 development.driver=com.mysql.jdbc.Driver
@@ -24,10 +18,17 @@ development.username=USERNAME
 development.password=PASSWORD
 development.url=jdbc:mysql://localhost/refactoring_analysis
 ```
-If you wish, you can choose a different name for the database (`refactoring_analysis` in the template). You don't need to create the database, since it will be automatically created by the program if it doesn't exist.
+If you wish, you can choose a different name for the database (`refactoring_analysis` in the template). Please make sure that another database with the same name doesn't exist, since it'll most likely have a different schema and the program will run into problems.
 
-### 3. Create a list of repositories
-The program requires a text file consisting of the git repositories you want to analyze. Each line in the text file should   include the complete URL of a git repository. (Example: [reposList.txt](reposList.txt))
+### 2. Create a list of repositories
+The program requires a text file consisting of the git repositories you want to analyze. Each line in the text file should   include the complete URL of a git repository. We have included the [reposList.txt](reposList.txt) file that contains 2,954 repositories.
+
+### 3. Build the project
+Run the following command to compile the project and create an executable JAR file:
+```
+./mvnw clean assembly:single clean
+```
+This command will create refactoring-analysis.jar file in the root directory.
 
 ### 4. Run the JAR file
 You can run the JAR file with the following command:
@@ -46,9 +47,7 @@ You can run the JAR file with the following command:
  ```
   java -jar refactoring-analysis.jar -r list.txt -c downloadedRepos -d mydb.properties -p 8 
  ```
- 
- #### JVM max heap size
- If you are using the `--parallelism` option to analyze multiple repositories in parallel, you might run into a [`OutOfMemoryError`](https://docs.oracle.com/javase/8/docs/api/java/lang/OutOfMemoryError.html). In order to avoid this, you can increase your JVM's maximum heap size by using the `-Xmx` option. For example, if you want to set it to 50 Gigabytes, you can use this command:
-```
-java -jar -Xmx50g refactoring-analysis.jar [OPTIONS]
-```
+ ### 5. Generate stat summaries
+ After the program has finished running, you can use the Python scripts in the [stats](stats) folder to look at the results.
+ - [data_resolver.py](stats/data_resolver.py): This script will print a summary of stats, including total number of merge scenarios, merge scenarios with involved refacotirngs, conflicting regions with involved refactorings, etc.
+ - [plotter.py](stats/plotter.py): This script can draw a number of different plots.
