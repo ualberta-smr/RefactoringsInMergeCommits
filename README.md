@@ -52,5 +52,7 @@ You can run the JAR file with the following command:
  - [data_resolver.py](stats/data_resolver.py): This script will print a summary of stats, including total number of merge scenarios, merge scenarios with involved refacotirngs, conflicting regions with involved refactorings, etc.
  - [plotter.py](stats/plotter.py): This script can draw a number of different plots.
  
- ## Replicate the SANER 2019 submission
-For our SANER 2019 submission, we used the provided [reposList.txt](reposList.txt) list of repositories. More information on how we created this list can be [found here](dataset).
+ ## Replicate the results of SANER 2019 submission
+For our SANER 2019 submission, we used the provided [reposList.txt](reposList.txt) list of repositories. More information on how we created this list can be [found here](dataset). However, if you start running the program on the same list you might get slightly different results. This is because our results are based on the satatus of the repositories on Oct 5, 2018, and new changes could have happened to the repositories since then.
+
+You can find a dump of our results after we finished the analysis [here](database/refactoring_analysis_dump_5_OCT_2018.sql.zip).
