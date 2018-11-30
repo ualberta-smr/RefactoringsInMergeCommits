@@ -2,6 +2,7 @@ import pandas as pd
 from sqlalchemy import create_engine
 import sys
 import re
+from numpy import std, mean, sqrt
 
 
 def get_db_connection():
@@ -390,5 +391,24 @@ def print_git_conflict_stats():
         print(layout_str.format(conflict_type, stat.sum().iloc[0], stat.size, stat.mean().iloc[0], stat.std().iloc[0]))
 
 
+def cohen_d(x, y):
+    nx = len(x)
+    ny = len(y)
+    dof = nx + ny - 2
+    return (mean(x) - mean(y)) / sqrt(((nx-1)*std(x, ddof=1) ** 2 + (ny-1)*std(y, ddof=1) ** 2) / dof)
+
+
+def cohen_delta_refactoring_types_involved_vs_overall():
+    all_refs = get_data_frame('refactorings_by_refactoring_type').fillna(0).T
+    involved_refs = get_data_frame('involved_refactorings_by_refactoring_type').fillna(0).T
+
+    cohen = dict()
+    for refactoring_type in all_refs.columns:
+        cohen[refactoring_type] = cohen_d(involved_refs[refactoring_type], all_refs[refactoring_type])
+        print("{}:\t{}".format(refactoring_type, cohen[refactoring_type]))
+
+
+
 if __name__ == '__main__':
-    print_stats()
+    cohen_delta_refactoring_types_involved_vs_overall()
+    # print_stats()
