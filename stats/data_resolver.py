@@ -2,7 +2,8 @@ import pandas as pd
 from sqlalchemy import create_engine
 import sys
 import re
-from numpy import std, mean, sqrt
+from scipy.stats import ranksums
+import math
 
 
 def get_db_connection():
@@ -391,24 +392,27 @@ def print_git_conflict_stats():
         print(layout_str.format(conflict_type, stat.sum().iloc[0], stat.size, stat.mean().iloc[0], stat.std().iloc[0]))
 
 
-def cohen_d(x, y):
-    nx = len(x)
-    ny = len(y)
-    dof = nx + ny - 2
-    return (mean(x) - mean(y)) / sqrt(((nx-1)*std(x, ddof=1) ** 2 + (ny-1)*std(y, ddof=1) ** 2) / dof)
+def effect_size_conflicting_region_by_involved_refactoring():
+    crs_by_involved_refactoring = get_data_frame('conflicting_regions_by_count_of_involved_refactoring')
+    cr_size_with_involved = crs_by_involved_refactoring[crs_by_involved_refactoring['involved_refactorings'] > 0][
+        'size'].tolist()
+    cr_size_without_involved = crs_by_involved_refactoring[crs_by_involved_refactoring['involved_refactorings'] == 0][
+        'size'].tolist()
+
+    z = ranksums(cr_size_with_involved, cr_size_without_involved)[0]
+    print(str(z / math.sqrt(len(cr_size_with_involved) + len(cr_size_without_involved))))
 
 
-def cohen_delta_refactoring_types_involved_vs_overall():
-    all_refs = get_data_frame('refactorings_by_refactoring_type').fillna(0).T
-    involved_refs = get_data_frame('involved_refactorings_by_refactoring_type').fillna(0).T
+def effect_size_number_of_conflicting_region_histories_by_involved_per_merge_commit():
+    df = get_data_frame('merge_commit_by_crh_and_devs_and_involved_refactorings')
+    crh_involved_count = df[df['involved_refs'] > 0]['crh'].tolist()
+    crh_not_involved_count = df[df['involved_refs'] == 0]['crh'].tolist()
 
-    cohen = dict()
-    for refactoring_type in all_refs.columns:
-        cohen[refactoring_type] = cohen_d(involved_refs[refactoring_type], all_refs[refactoring_type])
-        print("{}:\t{}".format(refactoring_type, cohen[refactoring_type]))
+    z = ranksums(crh_involved_count, crh_not_involved_count)[0]
+    print(str(z / math.sqrt(len(crh_involved_count) + len(crh_not_involved_count))))
+
 
 
 
 if __name__ == '__main__':
-    cohen_delta_refactoring_types_involved_vs_overall()
-    # print_stats()
+    print_stats()
