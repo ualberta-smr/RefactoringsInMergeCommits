@@ -26,7 +26,7 @@ The program requires a text file consisting of the git repositories you want to 
 ### 3. Build the project
 Run the following command to compile the project and create an executable JAR file:
 ```
-./mvnw clean assembly:single clean
+./mvnw clean compile assembly:single clean
 ```
 This command will create `refactoring-analysis.jar` file in the root directory.
 
