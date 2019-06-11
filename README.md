@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/141192128.svg)](https://zenodo.org/badge/latestdoi/141192128)
+
 # Refactoring Analysis [![Build Status](https://travis-ci.com/ualberta-smr/RefactoringsInMergeCommits.svg?branch=master)](https://travis-ci.com/ualberta-smr/RefactoringsInMergeCommits)
 This project analyzes merge commits in git repositries and determines whether refactoring changes are to blame for the conflicts.
 
