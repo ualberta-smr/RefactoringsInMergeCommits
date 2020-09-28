@@ -18,11 +18,6 @@ from scipy.stats import ranksums
 import math
 
 def get_merge_commits_with_involved_refs_in_crs():
-    # TODO
-    # 1. make a new table with merge_commit_id, cr_count, involved_cr_count, project_id
-    # 2. get merge_commits table
-    # 3. rename merge_commit_id in invovled table to id
-
     # from get_conflicting_regions_by_involved_refactorings_per_merge_commit
     print('attempting to get involved crs')
     conflicting_region_histories = get_conflicting_region_histories()
@@ -79,8 +74,6 @@ def get_merge_commits_with_involved_refs_in_crs():
 
 
 def update_merge_commit_table_with_involved_refactorings(involved_cr_count_per_merge):
-
-    # updated_merge_commit_involved_table = pd.DataFrame()
     print('Final table!')
     print(involved_cr_count_per_merge)
 
@@ -94,52 +87,21 @@ def update_merge_commit_table_with_involved_refactorings(involved_cr_count_per_m
     # TODO - has_involved_refs values will be determined by involved_cr_count_per_merge value involved_cr_count > 0
     # TODO - if true, update has_involved_refs for corresponding merge commit id to 1
 
-    # # x = tuple, y = actual row
-    # for merge_commit_id, merge_commit in merge_commits.groupby('id'):
-    #     # print(merge_commit)
-    # # matches = involved_cr_count_per_merge[involved_cr_count_per_merge[]]
-    #
-    #     updated_merge_commit_involved_table.append(merge_commit)
-    #
-    #     # will take long becase there's too many merge_commits lol.
-    #     print(updated_merge_commit_involved_table)
+    updated_merge_commit_involved_table['has_involved_refs'] = 0
+    print(updated_merge_commit_involved_table)
 
+    merge_commits_grouped_by_merge_commit_id = updated_merge_commit_involved_table.groupby('id')
 
-    # involved_merge_commits_table = cr_count_per_merge.join(involved_cr_count_per_merge, how='outer').fillna(0).astype(int)
-    # involved_merge_commits_table.groupby('merge_commit_id').merge_commit_id.nunique().to_frame().rename(columns={'merge_commit_id': 'id'})
-    # print(involved_merge_commits_table)
+    for merge_commit_id, involved_cr_count_data in involved_cr_count_per_merge.groupby('merge_commit_id'):
+        if merge_commit_id not in merge_commits_grouped_by_merge_commit_id.groups:
+            continue
 
-    # Filter by merge_commits and then paste into another table
-    # merge_commits = get_merge_commits()
-    # print(merge_commits)
-    # mc_grouped_by_project = merge_commits.groupby('project_id')
-    counter = 0
-    # for project_id, project_crh in mc_grouped_by_project.groupby('project_id'):
-    # for column in merge_commits:
-    #     counter += 1
-    #     print('Processing project {} from custom function'.format(counter))
+        x = merge_commits_grouped_by_merge_commit_id.get_group(merge_commit_id)
+        updated_merge_commit_involved_table.loc[updated_merge_commit_involved_table['id'] == merge_commit_id, 'has_involved_refs'] = 1
 
+    print(updated_merge_commit_involved_table)
+    print(updated_merge_commit_involved_table[updated_merge_commit_involved_table['has_involved_refs'] > 0])
 
-        # involved_refs_count = pd.DataFrame(columns={'involved_refs'})
-        # if project_id in rr_grouped_by_project.groups:
-        #     project_rrs = rr_grouped_by_project.get_group(project_id)
-        #     crh_rr_combined = pd.merge(project_crh.reset_index(), project_rrs.reset_index(), on='commit_hash',
-        #                                how='inner')
-        #     crh_with_involved_refs = crh_rr_combined[crh_rr_combined.apply(record_involved, axis=1)]
-        #     involved_refs_count = crh_with_involved_refs.groupby('merge_commit_id').size().to_frame().rename(
-        #         columns={0: 'involved_refs'})
-        #
-        # crh_count = project_crh.groupby('merge_commit_id').commit_hash.nunique().to_frame().rename(
-        #     columns={'commit_hash': 'crh'})
-        # devs_count = project_crh.groupby('merge_commit_id').author_email.nunique().to_frame().rename(
-        #     columns={'author_email': 'devs'})
-        #
-        # this_project = crh_count.join(devs_count, how='outer').join(involved_refs_count, how='outer').fillna(0).astype(
-        #     int)
-        # mc_by_crh_and_devs_and_involved_refactorings = mc_by_crh_and_devs_and_involved_refactorings.append(this_project)
-
-    # print(crs)
-    # print(crs[crs['involved_cr_count'] > 0])
 
 if __name__ == '__main__':
     # test()
