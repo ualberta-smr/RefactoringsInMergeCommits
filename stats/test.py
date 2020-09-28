@@ -1,32 +1,24 @@
-from data_resolver import test,\
-    get_merge_commit_by_crh_and_devs_and_involved_refactorings,\
-    get_conflicting_regions_by_involved_refactorings_per_merge_commit,\
-    get_conflicting_regions_by_count_of_involved_refactoring ,\
-    effect_size_conflicting_region_by_involved_refactoring,\
-    print_stats,\
-    get_merge_commits_with_involved_refs_in_crs,\
-    get_conflicting_region_histories,\
-    get_accepted_refactoring_regions,\
-    get_merge_commits,\
-    record_involved
-
 import pandas as pd
-from sqlalchemy import create_engine
-import sys
-import re
-from scipy.stats import ranksums
-import math
+from data_resolver import get_conflicting_region_histories, \
+    get_accepted_refactoring_regions, \
+    get_merge_commits, \
+    record_involved
+from sys import argv, stderr
 
-def get_merge_commits_with_involved_refs_in_crs():
+# TODO
+# test output with actual db and see if merge commits are properly represented
+# to pickle for project id
+# to pickle for general stats
+# to csv to project id
+# to csv for general stats
+# include refactoring size filtering + attached to project id stats
+# include number of merge commits per project for general stats
+
+
+def get_merge_commits_with_involved_refs():
     # from get_conflicting_regions_by_involved_refactorings_per_merge_commit
-    print('attempting to get involved crs')
     conflicting_region_histories = get_conflicting_region_histories()
     refactoring_regions = get_accepted_refactoring_regions()
-
-    # rename a groupby possible
-    cr_count_per_merge = conflicting_region_histories.groupby(
-        'merge_commit_id').conflicting_region_id.nunique().to_frame().rename(
-        columns={'conflicting_region_id': 'cr_count'})
 
     # We will append later. Shows how many involved refactorings there are per merge scenario/commit.
     involved_cr_count_per_merge = pd.DataFrame()
@@ -38,7 +30,6 @@ def get_merge_commits_with_involved_refs_in_crs():
         # project_crh is a table specific to a project_id
 
         counter += 1
-        # print('Processing project {}'.format(counter))
         if project_id not in rr_grouped_by_project.groups:
             continue
 
@@ -63,32 +54,19 @@ def get_merge_commits_with_involved_refs_in_crs():
         involved_cr_count_per_merge = involved_cr_count_per_merge.append(
             involved.groupby('merge_commit_id').conflicting_region_id.nunique().to_frame().rename(
                 columns={'conflicting_region_id': 'involved_cr_count'}))
-        # print(involved_cr_count_per_merge)
 
-        print('For project {}'.format(project_id))
-        print(involved_cr_count_per_merge)  # if empty dataframe, this means this project has no merge commit with involved refactorings
-        # test
-        if counter > 1: break
+        if counter > 5: break
 
-    update_merge_commit_table_with_involved_refactorings(involved_cr_count_per_merge)
+    merge_commits_with_involved_refs = create_merge_commit_dataframe_with_involved_refs(involved_cr_count_per_merge)
+    return merge_commits_with_involved_refs[
+        merge_commits_with_involved_refs['has_involved_refs'] > 0]
 
 
-def update_merge_commit_table_with_involved_refactorings(involved_cr_count_per_merge):
-    print('Final table!')
-    print(involved_cr_count_per_merge)
-
+def create_merge_commit_dataframe_with_involved_refs(involved_cr_count_per_merge):
+    # Copy merge_commit dataframe to create a new dataframe with merge_commit fields; add has_involved refs field here
     merge_commits = get_merge_commits()
-
     updated_merge_commit_involved_table = merge_commits.copy()
-    print(updated_merge_commit_involved_table)
-
-    # TODO - add a column is_involved or has_involved_refs to copied dataframe
-    # TODO - fillna has_involved_refs with a placeholder value like 0
-    # TODO - has_involved_refs values will be determined by involved_cr_count_per_merge value involved_cr_count > 0
-    # TODO - if true, update has_involved_refs for corresponding merge commit id to 1
-
     updated_merge_commit_involved_table['has_involved_refs'] = 0
-    print(updated_merge_commit_involved_table)
 
     merge_commits_grouped_by_merge_commit_id = updated_merge_commit_involved_table.groupby('id')
 
@@ -96,27 +74,76 @@ def update_merge_commit_table_with_involved_refactorings(involved_cr_count_per_m
         if merge_commit_id not in merge_commits_grouped_by_merge_commit_id.groups:
             continue
 
-        x = merge_commits_grouped_by_merge_commit_id.get_group(merge_commit_id)
-        updated_merge_commit_involved_table.loc[updated_merge_commit_involved_table['id'] == merge_commit_id, 'has_involved_refs'] = 1
+        # If merge commit has involved_cr_count > 0, this means there is at least one conflict region affected by an
+        # involved refactoring. Set boolean to true (1).
+        updated_merge_commit_involved_table.loc[
+            updated_merge_commit_involved_table['id'] == merge_commit_id, 'has_involved_refs'] = 1
 
-    print(updated_merge_commit_involved_table)
-    print(updated_merge_commit_involved_table[updated_merge_commit_involved_table['has_involved_refs'] > 0])
+    return updated_merge_commit_involved_table
+
+
+def get_projects_with_merge_commits_and_involved_refs():
+    merge_commits_with_involved_refs = get_merge_commits_with_involved_refs()
+    merge_commits_with_involved_refs_grouped = merge_commits_with_involved_refs.groupby('id')
+    projects = {}
+
+    for merge_commit_id, merge_commit_data in merge_commits_with_involved_refs_grouped:
+        index = int(merge_commit_id) - 1
+        project_id = merge_commit_data.at[index, 'project_id']
+        if project_id not in projects.keys():
+            projects[project_id] = []
+        projects[project_id].append(merge_commit_id)
+
+    return projects
+
+
+def print_projects_with_involved_refs_stats():
+    print("Getting stats for projects with involved refactorings...")
+
+    projects = get_projects_with_merge_commits_and_involved_refs()
+
+    print('-' * 80)
+    print('Number of projects with involved refactorings: {}'.format(len(projects)))
+    print('Projects involved:')
+
+    for project_id in projects:
+        print('\tProject {}'.format(project_id))
+
+    print('-' * 80)
+
+
+def get_merge_commits_for_project_id(project_id):
+    projects = get_projects_with_merge_commits_and_involved_refs()
+    # print("OUR INPUT: ", project_id)
+    # print("OUR LIST: ", projects)
+    for project in projects:
+        # print("CURRENT READ PROJECT IN LIST: ", project)
+        if project_id == project:
+            return projects[project]
+
+    return None
+
+
+def print_merge_commits_for_project_id(project_id):
+    print("Getting involved merge commits for project {}".format(str(project_id)))
+    merge_commits = get_merge_commits_for_project_id(project_id)
+
+    if merge_commits is None:
+        print('No merge commits with involved refactorings were found for project {}!'.format(str(project_id)))
+    else:
+        print('Involved merge commits for project {}:'.format(str(project_id)))
+        for merge_commit in merge_commits:
+            print('\tMerge commit {}'.format(merge_commit))
 
 
 if __name__ == '__main__':
-    # test()
-    get_merge_commits_with_involved_refs_in_crs()
-    # values = get_merge_commit_by_crh_and_devs_and_involved_refactorings()
-    # print(values)
-    # print(values.at[28,'involved_refs'])
-
-    # te = get_conflicting_regions_by_involved_refactorings_per_merge_commit()
-    # print(te)
-
-    # print(effect_size_conflicting_region_by_involved_refactoring())
-
-    # print(get_conflicting_regions_by_count_of_involved_refactoring())
-
-    # print_stats()
-
-    # get_merge_commits_with_involved_refs_in_crs()
+    if len(argv) == 1:
+        print_projects_with_involved_refs_stats()
+    else:
+        try:
+            if isinstance(int(argv[2]), int):
+                print_merge_commits_for_project_id(int(argv[2]))
+            else:
+                stderr.write('\'-mc\' requires an integer argument!\n')
+        except Exception: # account for possible index error
+            stderr.write('\'-mc\' requires an integer argument!\n')
