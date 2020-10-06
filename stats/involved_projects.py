@@ -1,25 +1,29 @@
-import pandas as pd
-from data_resolver import get_conflicting_region_histories, get_accepted_refactoring_regions, get_merge_commits, record_involved
-from sys import argv, modules, stderr
+import sys
 
-# TODO
-# to pickle for project id
-# to pickle for general stats
-# to csv to project id
-# to csv for general stats
-# include refactoring size filtering + attached to project id stats
-# include number of merge commits per project for general stats
+import pandas as pd
+from data_resolver import get_conflicting_region_histories, get_accepted_refactoring_regions, get_merge_commits, \
+    record_involved
+from sys import argv, stderr
 
 
 def get_data_frame(df_name):
-    # TODO
-    # runs the appropriate get method if no pickle available
+    """Reads pickle containing all projects with involved merge commits for faster parsing. Otherwise, read entire data
+    base and then create pickle.
+    """
     try:
         return pd.read_pickle(df_name + '.pickle')
     except FileNotFoundError:
-        df = getattr(modules[__name__], 'get_' + df_name)()
+        df = getattr(sys.modules[__name__], 'get_' + df_name)()
         df.to_pickle(df_name + '.pickle')
         return df
+
+
+def all_involved_merge_commits_to_csv():
+    """ Creates a csv file containing all involved merge commits and projects.
+    """
+    data = get_data_frame("merge_commits_with_involved_refs")
+    data.to_csv(path_or_buf='all_involved_merge_commits.csv')
+    print("CSV file created!\n")
 
 
 def get_merge_commits_with_involved_refs():
@@ -52,10 +56,6 @@ def get_merge_commits_with_involved_refs():
             involved.groupby('merge_commit_id').conflicting_region_id.nunique().to_frame().rename(
                 columns={'conflicting_region_id': 'involved_cr_count'}))
 
-        # FIXME temporary
-        if counter > 10:
-            break
-
     merge_commits_with_involved_refs = create_merge_commit_dataframe_with_involved_refs(involved_cr_count_per_merge)
 
     return merge_commits_with_involved_refs[merge_commits_with_involved_refs['has_involved_refs'] > 0]
@@ -72,6 +72,7 @@ def create_merge_commit_dataframe_with_involved_refs(involved_cr_count_per_merge
     merge_commits = get_merge_commits()
     updated_merge_commit_involved_table = merge_commits.copy()
     updated_merge_commit_involved_table['has_involved_refs'] = 0
+    updated_merge_commit_involved_table['involved_cr_count'] = 0
 
     merge_commits_grouped_by_merge_commit_id = updated_merge_commit_involved_table.groupby('id')
 
@@ -81,18 +82,23 @@ def create_merge_commit_dataframe_with_involved_refs(involved_cr_count_per_merge
 
         # If merge_commit_id has involved_cr_count > 0, this means there is at least one conflict region affected by an
         # involved refactoring. Set boolean for has_involved_refs to true (1).
-        updated_merge_commit_involved_table.loc[updated_merge_commit_involved_table['id'] == merge_commit_id, 'has_involved_refs'] = 1
+        updated_merge_commit_involved_table.loc[
+            updated_merge_commit_involved_table['id'] == merge_commit_id, 'has_involved_refs'] = 1
+        updated_merge_commit_involved_table.loc[
+            updated_merge_commit_involved_table['id'] == merge_commit_id, 'involved_cr_count'] \
+            = involved_cr_count_data.at[merge_commit_id, 'involved_cr_count']
 
     return updated_merge_commit_involved_table
 
 
 def get_dict_projects_with_merge_commits_and_involved_refs():
     """ Returns a dictionary of projects and their merge commit ids that have involved refactorings.
-    Keys are the project ids, while values are the commit ids for a project id (if any).
+    Keys are the project ids, while values are lists with tuples (merge_commit_id, involved_cr_count) for a project id (if any).
+        Ex. {13: [(186, 1)]} -- project 13 has a merge commit id 186 that has only one involved refactoring
 
-    :return: dict with keys as project ids and values as a list of merge commit ids a project may have.
+    :return: dict with keys as project ids and values as a list of tuples (merge_commit_id, involved_cr_count)
     """
-    merge_commits_with_involved_refs = get_merge_commits_with_involved_refs()
+    merge_commits_with_involved_refs = get_data_frame("merge_commits_with_involved_refs")
     merge_commits_with_involved_refs_grouped = merge_commits_with_involved_refs.groupby('id')
     projects = {}
 
@@ -103,64 +109,68 @@ def get_dict_projects_with_merge_commits_and_involved_refs():
         if project_id not in projects.keys():
             projects[project_id] = []
 
-        projects[project_id].append(merge_commit_id)
+        merge_commit_id_and_cr_count = (merge_commit_id, merge_commit_data.at[merge_commit_id - 1, 'involved_cr_count'])
+        projects[project_id].append(merge_commit_id_and_cr_count)
 
     return projects
 
 
-def print_projects_with_involved_refs_stats():
-    print("Getting stats for projects with involved refactorings...")
-
-    projects = get_dict_projects_with_merge_commits_and_involved_refs()
-
-    print('-' * 80)
-    print('Number of projects with involved refactorings: {}'.format(len(projects)))
-    print('Projects involved:')
-
-    for project_id in projects:
-        print('\tProject {}'.format(project_id))
-
-    print('-' * 80)
-
-
 def get_list_of_merge_commits_for_project_id(project_id):
-    """ Returns a list of merge commit ids for a given project id that have involved refactorings.
+    """ Returns a list of tuples as (merge_commit_id, involved_cr_count) for a given project_id that has involved refactorings.
 
     :param project_id: integer value representing a project id
-    :return: list of integers representing merge commit ids
+    :return: list of tuples as (merge_commit_id, involved_cr_count) for specified project_id
     """
-    projects = get_dict_projects_with_merge_commits_and_involved_refs()
-    # print("OUR INPUT: ", project_id)
-    # print("OUR LIST: ", projects)
+    merge_commit_and_cr_count = get_dict_projects_with_merge_commits_and_involved_refs()
+    projects = merge_commit_and_cr_count
+
     for project in projects:
-        # print("CURRENT READ PROJECT IN LIST: ", project)
         if project_id == project:
             return projects[project]
 
     return None
 
 
-def print_merge_commits_for_project_id(project_id):
-    print("Getting involved merge commits for project {}".format(str(project_id)))
-    merge_commits = get_list_of_merge_commits_for_project_id(project_id)
+def print_projects_with_involved_refs_stats():
+    print("Getting stats for projects with involved refactorings...")
 
-    if merge_commits is None:
+    merge_commit_and_cr_count = get_dict_projects_with_merge_commits_and_involved_refs()
+    projects = merge_commit_and_cr_count
+
+    print('-' * 80)
+    print('Number of projects with involved refactorings: {}'.format(len(projects)))
+    print('Projects involved:')
+
+    for project_id in projects:
+        print('\tProject {} -- {} merge commit(s) involved'.format(project_id, len(projects[project_id])))
+
+    print('-' * 80)
+
+
+def print_merge_commits_for_project_id(project_id):
+    print("Getting involved merge commits for Project {}...".format(str(project_id)))
+    merge_commit_and_cr_count = get_list_of_merge_commits_for_project_id(project_id)
+
+    if merge_commit_and_cr_count is None:
         print('No merge commits with involved refactorings were found for project {}!'.format(str(project_id)))
     else:
-        print('Involved merge commits for project {}:'.format(str(project_id)))
-        for merge_commit in merge_commits:
-            print('\tMerge commit {}'.format(merge_commit))
+        print(
+            '{} involved merge commit(s) found for Project {}:'.format(len(merge_commit_and_cr_count), str(project_id)))
+        for tup in merge_commit_and_cr_count:
+            print('\tMerge commit {} -- {} involved conflict region(s)'.format(tup[0], tup[1]))
 
 
 if __name__ == '__main__':
-    """ Running python file with project id as a parameter will output all involved merge commits for the currently
-    specified project id.
-    """
+    # Running python file with project id as a parameter will output all involved merge commits for the currently
+    # specified project id.
+
     if len(argv) == 1:
         print_projects_with_involved_refs_stats()
     else:
         try:
-            if isinstance(int(argv[1]), int):
+            if argv[1] == '--csv':
+                all_involved_merge_commits_to_csv()
+            elif isinstance(int(argv[1]), int):
                 print_merge_commits_for_project_id(int(argv[1]))
         except Exception:
             stderr.write('Project id should be an integer!\n')
