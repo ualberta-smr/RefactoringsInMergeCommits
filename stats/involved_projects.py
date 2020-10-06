@@ -22,7 +22,7 @@ def all_involved_merge_commits_to_csv():
     """ Creates a csv file containing all involved merge commits and projects.
     """
     data = get_data_frame("merge_commits_with_involved_refs")
-    data.to_csv(path_or_buf='all_involved_merge_commits.csv')
+    data.to_csv(path_or_buf='merge_commits_with_involved_refs.csv')
     print("CSV file created!\n")
 
 
@@ -161,8 +161,8 @@ def print_merge_commits_for_project_id(project_id):
 
 
 if __name__ == '__main__':
-    # Running python file with project id as a parameter will output all involved merge commits for the currently
-    # specified project id.
+    # Running python file with project id as a int parameter will output all involved merge commits for the currently
+    # specified project id. Otherwise, `--csv` will generate csv file of all merge commits with involved refactorings.
 
     if len(argv) == 1:
         print_projects_with_involved_refs_stats()
