@@ -1,9 +1,7 @@
-import sys
-
 import pandas as pd
 from data_resolver import get_conflicting_region_histories, get_accepted_refactoring_regions, get_merge_commits, \
     record_involved
-from sys import argv, stderr
+from sys import argv, modules, stderr
 
 
 def get_data_frame(df_name):
@@ -13,7 +11,7 @@ def get_data_frame(df_name):
     try:
         return pd.read_pickle(df_name + '.pickle')
     except FileNotFoundError:
-        df = getattr(sys.modules[__name__], 'get_' + df_name)()
+        df = getattr(modules[__name__], 'get_' + df_name)()
         df.to_pickle(df_name + '.pickle')
         return df
 
@@ -131,8 +129,49 @@ def get_list_of_merge_commits_for_project_id(project_id):
     return None
 
 
+def conflict_regions_with_involved_refactorings_for_project_id_and_merge_commit(input_project_id, input_merge_commit_id):
+    """ Returns a DataFrame of all conflict regions for a particular project_id and merge_commit_id with conflict regions.
+    If there are no conflict_regions or the inputted ids are invalid, returns None.
+
+    :param input_project_id: project_id
+    :param input_merge_commit_id: merge_commit_id
+    :return: DataFrame of conflict regions with involved refactorings; otherwise None
+    """
+    conflicting_region_histories = get_conflicting_region_histories()
+    refactoring_regions = get_accepted_refactoring_regions()
+
+    rr_grouped_by_project = refactoring_regions.groupby('project_id')
+    counter = 0
+    involved = None
+
+    for project_id, project_crh in conflicting_region_histories.groupby('project_id'):
+        # project_crh is a DataFrame specific to a project_id.
+        counter += 1
+        if input_project_id != project_id:
+            continue
+
+        project_rrs = rr_grouped_by_project.get_group(project_id)
+        crh_rr_combined = pd.merge(project_crh.reset_index(), project_rrs.reset_index(), on='commit_hash', how='inner')
+
+        # Filter fields in crh_rr_combined that have involved refactorings.
+        involved = crh_rr_combined[crh_rr_combined.apply(record_involved, axis=1)]
+
+        for col in involved.columns.values:
+            # print(col)
+            if col not in ['conflicting_region_id', 'commit_hash', 'conflicting_java_file_id', 'merge_commit_id', 'project_id_x', 'refactoring_commit_id', 'refactoring_id', 'length']:
+                involved = involved.drop(col, axis=1)
+
+        involved = involved.loc[involved['merge_commit_id'] == input_merge_commit_id]
+
+        if not involved.empty:
+            return involved
+        break
+
+    return None
+
+
 def print_projects_with_involved_refs_stats():
-    print("Getting stats for projects with involved refactorings...")
+    print('Getting stats for projects with involved refactorings...')
 
     merge_commit_and_cr_count = get_dict_projects_with_merge_commits_and_involved_refs()
     projects = merge_commit_and_cr_count
@@ -148,25 +187,45 @@ def print_projects_with_involved_refs_stats():
 
 
 def print_merge_commits_for_project_id(project_id):
-    print("Getting involved merge commits for Project {}...".format(str(project_id)))
+    print('Getting involved merge commits for Project {}...'.format(str(project_id)))
     merge_commit_and_cr_count = get_list_of_merge_commits_for_project_id(project_id)
 
     if merge_commit_and_cr_count is None:
         print('No merge commits with involved refactorings were found for project {}!'.format(str(project_id)))
     else:
         print(
-            '{} involved merge commit(s) found for Project {}:'.format(len(merge_commit_and_cr_count), str(project_id)))
+            '{} involved merge commit(s) found for project {}:'.format(len(merge_commit_and_cr_count), str(project_id)))
         for tup in merge_commit_and_cr_count:
             print('\tMerge commit {} -- {} involved conflict region(s)'.format(tup[0], tup[1]))
 
 
-if __name__ == '__main__':
-    # Running python file with project id as a int parameter will output all involved merge commits for the currently
-    # specified project id. Otherwise, `--csv` will generate csv file of all merge commits with involved refactorings.
+def print_conflict_regions_for_project_id_and_merge_commit_id(project_id, merge_commit_id):
+    print('Getting conflict regions with involved refactorings for Project {} and Merge Commit {}...'.format(project_id, merge_commit_id))
+    conflict_regions = conflict_regions_with_involved_refactorings_for_project_id_and_merge_commit(project_id, merge_commit_id)
 
+    if conflict_regions is None:
+        print('Could not find data for Project {} or Merge Commit {}'.format(project_id, merge_commit_id))
+    else:
+        print('\n')
+        print('Conflict regions with involved refactorings for Project {} and Merge Commit {}:'.format(project_id, merge_commit_id))
+        print(conflict_regions)
+
+
+if __name__ == '__main__':
+    """Ways to execute script:
+    
+        1. python involved_projects.py : show all project ids with involved refactorings
+        
+        2. python involved_projects.py --csv : convert output with all project ids with involved refactorings to a csv
+        
+        3. python involved_projects.py <project_id> : show all merge commits with involved refactorings for current project id
+        
+        4. python involved_projects.py <project_id> <merge_commit_id> : show all conflict regions with involved refactorings
+        for the current project id and merge commit id
+    """
     if len(argv) == 1:
         print_projects_with_involved_refs_stats()
-    else:
+    elif len(argv) == 2:
         try:
             if argv[1] == '--csv':
                 all_involved_merge_commits_to_csv()
@@ -174,3 +233,9 @@ if __name__ == '__main__':
                 print_merge_commits_for_project_id(int(argv[1]))
         except Exception:
             stderr.write('Project id should be an integer!\n')
+    elif len(argv) == 3:
+        try:
+            if isinstance(int(argv[1]), int) and isinstance((int(argv[2])), int):
+                print_conflict_regions_for_project_id_and_merge_commit_id(int(argv[1]), int(argv[2]))
+        except Exception:
+            stderr.write('Project id and merge commit id should be integers!\n')
