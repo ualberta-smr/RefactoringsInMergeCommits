@@ -224,7 +224,7 @@ public class RefactoringAnalysis {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         try {
             File projectFile = new File(clonePath, project.getName());
-            RefactoringMinerUtils refMinerUtils = new RefactoringMinerUtils(projectFile, project.getURL());
+            RefactoringMinerUtils refMinerUtils = new RefactoringMinerUtils(projectFile);
 
             for (int i = 0; i < historyConfRegions.size(); i++) {
                 ConflictingRegionHistory conflictingRegionHistory = historyConfRegions.get(i);

@@ -4,7 +4,6 @@ import gr.uom.java.xmi.UMLClass;
 import gr.uom.java.xmi.UMLOperation;
 import gr.uom.java.xmi.diff.*;
 import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.revwalk.RevCommit;
 import org.refactoringminer.api.GitHistoryRefactoringMiner;
 import org.refactoringminer.api.Refactoring;
 import org.refactoringminer.api.RefactoringHandler;
@@ -18,10 +17,8 @@ import java.util.Set;
 public class RefactoringMinerUtils {
 
     private Git git;
-    private String url;
 
-    public RefactoringMinerUtils(File repoDir, String url) throws IOException {
-        this.url = url;
+    public RefactoringMinerUtils(File repoDir) throws IOException {
         git = Git.open(repoDir);
     }
 
@@ -33,9 +30,9 @@ public class RefactoringMinerUtils {
         new GitUtils(git).gitReset();
 
         GitHistoryRefactoringMiner miner = new GitHistoryRefactoringMinerImpl();
-        miner.detectAtCommit(git.getRepository(), url, commitHash, new RefactoringHandler() {
+        miner.detectAtCommit(git.getRepository(), commitHash, new RefactoringHandler() {
             @Override
-            public void handle(RevCommit commitData, List<Refactoring> refactorings) {
+            public void handle(String commitData, List<Refactoring> refactorings) {
                 refactoringsResult.addAll(refactorings);
             }
         });
@@ -75,18 +72,18 @@ public class RefactoringMinerUtils {
                 UMLClass extractedClass = ((ExtractSuperclassRefactoring) refactoring).getExtractedClass();
                 destCodeRange.add(extractedClass.getLocationInfo().codeRange());
 
-                Set<UMLClass> subClasses = ((ExtractSuperclassRefactoring) refactoring).getSubclassUMLSet();
+                Set<UMLClass> subClasses = ((ExtractSuperclassRefactoring) refactoring).getUMLSubclassSet();
                 subClasses.forEach(umlClass -> {
                     sourceCodeRange.add(umlClass.getLocationInfo().codeRange());
                     destCodeRange.add(umlClass.getLocationInfo().codeRange());
                 });
                 break;
             case EXTRACT_AND_MOVE_OPERATION:
-                UMLOperation extractedOperation = ((ExtractAndMoveOperationRefactoring) refactoring)
-                        .getExtractedOperation();
-                UMLOperation sourceBeforeExtraction = ((ExtractAndMoveOperationRefactoring) refactoring)
+                UMLOperation extractedOperation = ((ExtractOperationRefactoring) refactoring).getExtractedOperation();
+                UMLOperation sourceBeforeExtraction = ((ExtractOperationRefactoring) refactoring)
                         .getSourceOperationBeforeExtraction();
-                UMLOperation sourceAfterExtraction = ((ExtractAndMoveOperationRefactoring) refactoring)
+
+                UMLOperation sourceAfterExtraction = ((ExtractOperationRefactoring) refactoring)
                         .getSourceOperationAfterExtraction();
 
                 sourceCodeRange.add(sourceBeforeExtraction.getLocationInfo().codeRange());
