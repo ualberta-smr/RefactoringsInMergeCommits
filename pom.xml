@@ -76,12 +76,13 @@
     </build>
     <dependencies>
 
-	<!-- https://mvnrepository.com/artifact/com.github.tsantalis/refactoring-miner -->
-	<dependency>
-		<groupId>com.github.tsantalis</groupId>
-		<artifactId>refactoring-miner</artifactId>
-		<version>2.1.0</version>
-	</dependency>
+      <!-- https://mvnrepository.com/artifact/com.github.tsantalis/refactoring-miner -->
+      <dependency>
+        <groupId>com.github.tsantalis</groupId>
+        <artifactId>refactoring-miner</artifactId>
+        <version>2.1.0</version>
+      </dependency>
+
 
         <dependency>
             <groupId>org.javalite</groupId>
@@ -98,7 +99,7 @@
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
-            <version>5.1.34</version>
+            <version>8.0.16</version>
         </dependency>
 
 
