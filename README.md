@@ -1,7 +1,7 @@
 [![DOI](https://zenodo.org/badge/141192128.svg)](https://zenodo.org/badge/latestdoi/141192128)
 
 # Refactoring Analysis [![Build Status](https://travis-ci.com/ualberta-smr/RefactoringsInMergeCommits.svg?branch=master)](https://travis-ci.com/ualberta-smr/RefactoringsInMergeCommits)
-This project analyzes merge commits in git repositries and determines whether refactoring changes are to blame for the conflicts.
+This project analyzes merge commits in git repositries and determines whether refactoring changes are to blame for the conflicts. For the version of the code used in our SANER '19 paper, please check [https://github.com/ualberta-smr/RefactoringsInMergeCommits/tree/saner19-cr](https://github.com/ualberta-smr/RefactoringsInMergeCommits/tree/saner19-cr). 
 
 
 ## System requirements
