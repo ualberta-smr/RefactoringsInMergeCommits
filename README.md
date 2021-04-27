@@ -7,7 +7,7 @@ This project analyzes merge commits in git repositries and determines whether re
 ## System requirements
 * Linux or macOS
 * git
-* Java 8
+* Java 11
 * MySQL 5.7
 
 ## How to run
